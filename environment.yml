@@ -1,0 +1,16 @@
+name: shape-processing-rnns
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+  - nvidia
+dependencies:
+  - cudatoolkit=11.7.0
+  - pytorch=2.0.0
+  - pytorch-cuda=11.8
+  - numpy=1.23.5
+  - pip=23.0.1
+  - python=3.10.9
+  - torchvision=0.15.0
+  - pip:
+      - tqdm==4.65.0
