@@ -6,6 +6,7 @@ import torch.utils.data as data
 import torch.nn as nn
 from tqdm import tqdm
 def train(model, optimizer, loss_fn, train_loader, val_loader, epochs=20, device='cpu'):
+    model.to(device)
     for epoch in range(epochs):
         training_loss = 0.0
         val_loss = 0.0
@@ -48,7 +49,7 @@ print(f'CUDA: {torch.cuda.is_available()}')
 if __name__ == '__main__':
     ds = get_imagenet('H:\datasets\imagenet')
 
-    batch_size = 64
+    batch_size = 1024
 
     train_data_loader = data.DataLoader(ds, batch_size=batch_size)
     #val_data_loader = data.DataLoader(ds_val, batch_size=batch_size)
