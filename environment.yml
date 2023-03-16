@@ -12,5 +12,6 @@ dependencies:
   - pip=23.0.1
   - python=3.10.9
   - torchvision=0.15.0
+  - wandb=0.14.0
   - pip:
       - tqdm==4.65.0
