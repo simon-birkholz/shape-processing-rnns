@@ -47,15 +47,20 @@ def train(model, optimizer, loss_fn, train_loader, val_loader, epochs=20, device
         #print(f'Epoch {epoch}, Training Loss: {training_loss:.2f}, Validation Loss: {val_loss:.2f}, Accurarcy: {(num_correct/num_examples):.2f}')
         print(f'Epoch {epoch}, Training Loss: {training_loss:.2f}')
 
-def learn(allparams):
+def learn(allparams, dataset: str, dataset_path: str, **config):
 
     run = wandb.init(
         project='shape-processing-rnns',
         config=dict(params=allparams)
     )
 
-    #ds = get_imagenet('H:\datasets\imagenet')
-    ds = get_imagenet_small('H:\datasets\imagenet_small\imagenet_images')
+    ds = None
+    if dataset == 'imagenet':
+        ds = get_imagenet(dataset_path)
+    elif dataset == 'imagenet_small':
+        ds = get_imagenet_small(dataset_path)
+    else:
+        raise ValueError('Unknown Dataset')
 
     batch_size = 1024
 
@@ -83,18 +88,19 @@ if __name__ == '__main__':
     print(f'CUDA: {torch.cuda.is_available()}')
 
     parser = argparse.ArgumentParser()
-    #parser.add_argument('config_file', type=str, help='Config file for models')
-    #parser.add_argument('--out', type=str, help='name for saving the model', default='test_run')
+    parser.add_argument('config_file', type=str, help='Config file for models')
+    parser.add_argument('--out', type=str, help='name for saving the model', default='test_run')
 
-    #args = parser.parse_args()
+    args = parser.parse_args()
 
-    #if not os.path.exists(args.config_file):
-    #    raise ValueError("No config file found")
-    #with open(args.config_file) as f:
-    #    config = json.load(f)
-    #config['save_dir'] = args.out
-    #allparams = config.copy()
-    learn({})
+    if not os.path.exists(args.config_file):
+        raise ValueError("No config file found")
+    with open(args.config_file) as f:
+        config = json.load(f)
+
+    config['save_dir'] = args.out
+    allparams = config.copy()
+    learn(allparams, **config)
 
 
 
