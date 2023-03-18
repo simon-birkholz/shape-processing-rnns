@@ -1,4 +1,4 @@
-from datasets.imagenet import get_imagenet, get_imagenet_small
+from datasets.imagenet import get_imagenet, get_imagenet_small, get_imagenet_kaggle
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
@@ -11,6 +11,11 @@ import json
 import os
 
 def train(model, optimizer, loss_fn, train_loader, val_loader, epochs=20, device='cpu'):
+
+    use_val = val_loader is not None
+    if use_val:
+        print('Detected Validation Dataset')
+
     model.to(device)
     for epoch in range(epochs):
         training_loss = 0.0
@@ -28,37 +33,49 @@ def train(model, optimizer, loss_fn, train_loader, val_loader, epochs=20, device
             training_loss += loss.data.item()
         training_loss /= len(train_loader)
 
-        #model.eval()
-        #num_correct = 0
-        #num_examples = 0
-        #for batch in val_loader:
-        #    inputs, targets = batch
-        #    inputs = inputs.to(device)
-        #    targets = targets.to(device)
-        #    outputs = model(inputs)
-        #    loss = loss_fn(outputs, targets)
-        #    val_loss += loss.data.item()
-        #    correct = torch.eq(torch.max(F.softmax(outputs), dim=1)[1], targets).view(-1)
-#
-        #    num_correct += torch.sum(correct).item()
-        #    num_examples += correct.shape[0]
-        #val_loss /= len(val_loader)
 
-        #print(f'Epoch {epoch}, Training Loss: {training_loss:.2f}, Validation Loss: {val_loss:.2f}, Accurarcy: {(num_correct/num_examples):.2f}')
-        print(f'Epoch {epoch}, Training Loss: {training_loss:.2f}')
+        if use_val:
+            model.eval()
+            num_correct = 0
+            num_examples = 0
+            for batch in val_loader:
+                inputs, targets = batch
+                inputs = inputs.to(device)
+                targets = targets.to(device)
+                outputs = model(inputs)
+                loss = loss_fn(outputs, targets)
+                val_loss += loss.data.item()
+                correct = torch.eq(torch.max(F.softmax(outputs), dim=1)[1], targets).view(-1)
+    #
+                num_correct += torch.sum(correct).item()
+                num_examples += correct.shape[0]
+            val_loss /= len(val_loader)
+
+            # Logging
+            accuracy = (num_correct/num_examples)
+
+            wandb.log({'training_loss' : training_loss, 'val_loss' : val_loss , 'accuracy': accuracy})
+            print(f'Epoch {epoch}, Training Loss: {training_loss:.2f}, Validation Loss: {val_loss:.2f}, Accuracy: {accuracy:.2f}')
+        else:
+            wandb.log({'training_loss': training_loss})
+            print(f'Epoch {epoch}, Training Loss: {training_loss:.2f}')
 
 def learn(allparams, dataset: str, dataset_path: str, **config):
 
     run = wandb.init(
         project='shape-processing-rnns',
+        entity='cenrypol',
         config=dict(params=allparams)
     )
 
     ds = None
+    ds_val = None
     if dataset == 'imagenet':
-        ds = get_imagenet(dataset_path)
+        ds, ds_val = get_imagenet(dataset_path)
     elif dataset == 'imagenet_small':
         ds = get_imagenet_small(dataset_path)
+    elif dataset == 'imagenet_kaggle':
+        ds, ds_val = get_imagenet_kaggle(dataset_path)
     else:
         raise ValueError('Unknown Dataset')
 
