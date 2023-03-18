@@ -44,7 +44,6 @@ class ImageNetKaggle(Dataset):
                 x = self.transform(x)
             return x, self.targets[idx]
 
-
 def get_imagenet_kaggle(path: str) -> Tuple[Dataset,Dataset]:
     tfs = transforms.Compose([
         transforms.Resize((64, 64)),
@@ -70,12 +69,20 @@ def get_imagenet(path: str) -> Tuple[Dataset,Dataset]:
     return imagenet , imagenet_val
 
 
-def get_imagenet_small(path: str) -> Dataset:
+def get_imagenet_small(path: str) -> Tuple[Dataset,Dataset]:
     tfs = transforms.Compose([
         transforms.Resize((64, 64)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
-    small_ds = datasets.ImageFolder(path, transform=tfs)
-    return small_ds
+    #val_to_label = {}
+    #with open(os.path.join(path, "Labels.json"), "r") as f:
+    #   val_to_label = json.load(f)
+
+    #def to_label(intern: str) -> str:
+    #    return val_to_label[intern]
+
+    small_ds = datasets.ImageFolder(os.path.join(path, 'train'), transform=tfs)
+    small_ds_val = datasets.ImageFolder(os.path.join(path, 'val'), transform=tfs)
+    return small_ds, small_ds_val

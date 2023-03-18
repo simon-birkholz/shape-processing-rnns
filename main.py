@@ -12,8 +12,7 @@ import os
 
 def train(model, optimizer, loss_fn, train_loader, val_loader, epochs=20, device='cpu'):
 
-    use_val = val_loader is not None
-    if use_val:
+    if val_loader:
         print('Detected Validation Dataset')
 
     model.to(device)
@@ -34,7 +33,7 @@ def train(model, optimizer, loss_fn, train_loader, val_loader, epochs=20, device
         training_loss /= len(train_loader)
 
 
-        if use_val:
+        if val_loader:
             model.eval()
             num_correct = 0
             num_examples = 0
@@ -68,12 +67,11 @@ def learn(allparams, dataset: str, dataset_path: str, **config):
         config=dict(params=allparams)
     )
 
-    ds = None
-    ds_val = None
+    ds, ds_val = None, None
     if dataset == 'imagenet':
         ds, ds_val = get_imagenet(dataset_path)
     elif dataset == 'imagenet_small':
-        ds = get_imagenet_small(dataset_path)
+        ds, ds_val = get_imagenet_small(dataset_path)
     elif dataset == 'imagenet_kaggle':
         ds, ds_val = get_imagenet_kaggle(dataset_path)
     else:
@@ -82,7 +80,8 @@ def learn(allparams, dataset: str, dataset_path: str, **config):
     batch_size = 1024
 
     train_data_loader = data.DataLoader(ds, batch_size=batch_size)
-    # val_data_loader = data.DataLoader(ds_val, batch_size=batch_size)
+
+    val_data_loader = data.DataLoader(ds_val, batch_size=batch_size) if ds_val else None
 
     simple_network = nn.Sequential(
         nn.Conv2d(3, 20, 5),
@@ -97,7 +96,7 @@ def learn(allparams, dataset: str, dataset_path: str, **config):
 
     loss = nn.CrossEntropyLoss()
 
-    train(simple_network, adam, loss, train_data_loader, None, 20, 'cuda')
+    train(simple_network, adam, loss, train_data_loader, val_data_loader, 20, 'cuda')
     run.finish()
 
 
