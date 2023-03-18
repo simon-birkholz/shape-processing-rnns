@@ -1,0 +1,4 @@
+{
+	"dataset" : "imagenet_small",
+	"dataset_path" : "${DATASET_PATH}"
+}
