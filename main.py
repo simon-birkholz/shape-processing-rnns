@@ -1,4 +1,4 @@
-from datasets.imagenet import get_imagenet
+from datasets.imagenet import get_imagenet, get_imagenet_small
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
@@ -54,7 +54,8 @@ def learn(allparams):
         config=dict(params=allparams)
     )
 
-    ds = get_imagenet('H:\datasets\imagenet')
+    #ds = get_imagenet('H:\datasets\imagenet')
+    ds = get_imagenet_small('H:\datasets\imagenet_small\imagenet_images')
 
     batch_size = 1024
 
@@ -67,7 +68,7 @@ def learn(allparams):
         nn.Conv2d(20, 64, 5),
         nn.ReLU(),
         nn.Flatten(),
-        nn.Linear(112896, 256)
+        nn.Linear(200704, 256)
     )
 
     adam = optim.AdamW(simple_network.parameters(), lr=0.001)
@@ -82,18 +83,18 @@ if __name__ == '__main__':
     print(f'CUDA: {torch.cuda.is_available()}')
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('config_file', type=str, help='Config file for models')
-    parser.add_argument('--out', type=str, help='name for saving the model', default='test_run')
+    #parser.add_argument('config_file', type=str, help='Config file for models')
+    #parser.add_argument('--out', type=str, help='name for saving the model', default='test_run')
 
-    args = parser.parse_args()
+    #args = parser.parse_args()
 
-    if not os.path.exists(args.config_file):
-        raise ValueError("No config file found")
-    with open(args.config_file) as f:
-        config = json.load(f)
-    config['save_dir'] = args.out
-    allparams = config.copy()
-    learn(allparams)
+    #if not os.path.exists(args.config_file):
+    #    raise ValueError("No config file found")
+    #with open(args.config_file) as f:
+    #    config = json.load(f)
+    #config['save_dir'] = args.out
+    #allparams = config.copy()
+    learn({})
 
 
 
