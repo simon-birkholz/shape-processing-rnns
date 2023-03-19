@@ -24,8 +24,10 @@ class ImageNetKaggle(Dataset):
         self.targets = []
         self.transform = transform
         self.syn_to_class = {}
+        self.classes = []
         with open(os.path.join(root, "imagenet_class_index.json"), "rb") as f:
                     json_file = json.load(f)
+                    self.classes = [v[0] for _, v in json_file.items()]
                     for class_id, v in json_file.items():
                         self.syn_to_class[v[0]] = int(class_id)
         with open(os.path.join(root, "ILSVRC2012_val_labels.json"), "rb") as f:
