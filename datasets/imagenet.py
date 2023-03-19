@@ -7,6 +7,10 @@ import os
 
 from typing import Tuple
 
+mean=[0.485, 0.456, 0.406]
+std=[0.229, 0.224, 0.225]
+
+
 # taken from https://towardsdatascience.com/downloading-and-using-the-imagenet-dataset-with-pytorch-f0908437c4be
 class ImageNetKaggle(Dataset):
     def __init__(self, root, split, transform=None):
@@ -48,7 +52,7 @@ def get_imagenet_kaggle(path: str) -> Tuple[Dataset,Dataset]:
     tfs = transforms.Compose([
         transforms.Resize((64, 64)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        transforms.Normalize(mean=mean, std=std)
     ])
 
     imagenet = ImageNetKaggle(path, transform=tfs, split='train')
@@ -60,7 +64,7 @@ def get_imagenet(path: str) -> Tuple[Dataset,Dataset]:
     tfs = transforms.Compose([
         transforms.Resize((64, 64)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        transforms.Normalize(mean=mean, std=std)
     ])
 
     imagenet = datasets.ImageNet(path, transform=tfs, split='train')
@@ -73,7 +77,7 @@ def get_imagenet_small(path: str) -> Tuple[Dataset,Dataset]:
     tfs = transforms.Compose([
         transforms.Resize((64, 64)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        transforms.Normalize(mean=mean, std=std)
     ])
 
     #val_to_label = {}
