@@ -62,7 +62,7 @@ def train(model, optimizer, loss_fn, train_loader, val_loader, epochs=20, device
             wandb.log({'training_loss': training_loss})
             print(f'Epoch {epoch+1}, Training Loss: {training_loss:.2f}')
 
-def learn(allparams, dataset: str, dataset_path: str, save_dir: str, **config):
+def learn(allparams, dataset: str, dataset_path: str, save_dir: str, batch_size: int, **config):
 
     run = wandb.init(
         project='shape-processing-rnns',
@@ -80,13 +80,13 @@ def learn(allparams, dataset: str, dataset_path: str, save_dir: str, **config):
     else:
         raise ValueError('Unknown Dataset')
 
-    batch_size = 256
+    num_classes = len(ds.classes)
 
     train_data_loader = data.DataLoader(ds, batch_size=batch_size)
 
     val_data_loader = data.DataLoader(ds_val, batch_size=batch_size) if ds_val else None
 
-    network = FeedForwardTower(cell_type='conv',num_classes=1000)
+    network = FeedForwardTower(cell_type='conv',num_classes=num_classes)
 
     adam = optim.AdamW(network.parameters(), lr=0.001)
 

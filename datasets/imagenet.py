@@ -10,6 +10,12 @@ from typing import Tuple
 mean=[0.485, 0.456, 0.406]
 std=[0.229, 0.224, 0.225]
 
+tfs = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=mean, std=std)
+    ])
+
 
 # taken from https://towardsdatascience.com/downloading-and-using-the-imagenet-dataset-with-pytorch-f0908437c4be
 class ImageNetKaggle(Dataset):
@@ -49,11 +55,6 @@ class ImageNetKaggle(Dataset):
             return x, self.targets[idx]
 
 def get_imagenet_kaggle(path: str) -> Tuple[Dataset,Dataset]:
-    tfs = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=mean, std=std)
-    ])
 
     imagenet = ImageNetKaggle(path, transform=tfs, split='train')
     imagenet_val = ImageNetKaggle(path, transform=tfs, split='val')
@@ -61,11 +62,6 @@ def get_imagenet_kaggle(path: str) -> Tuple[Dataset,Dataset]:
     return imagenet, imagenet_val
 
 def get_imagenet(path: str) -> Tuple[Dataset,Dataset]:
-    tfs = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=mean, std=std)
-    ])
 
     imagenet = datasets.ImageNet(path, transform=tfs, split='train')
     imagenet_val = datasets.ImageNet(path, transform=tfs, split='val')
@@ -74,11 +70,6 @@ def get_imagenet(path: str) -> Tuple[Dataset,Dataset]:
 
 
 def get_imagenet_small(path: str) -> Tuple[Dataset,Dataset]:
-    tfs = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=mean, std=std)
-    ])
 
     #val_to_label = {}
     #with open(os.path.join(path, "Labels.json"), "r") as f:

@@ -1,4 +1,5 @@
 {
 	"dataset" : "imagenet_small",
-	"dataset_path" : "${DATASET_PATH}"
+	"dataset_path" : "${DATASET_PATH}",
+	"batch_size" : 1024
 }
