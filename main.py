@@ -86,7 +86,7 @@ def learn(allparams, dataset: str, dataset_path: str, save_dir: str, **config):
 
     val_data_loader = data.DataLoader(ds_val, batch_size=batch_size) if ds_val else None
 
-    network = FeedForwardTower(cell_type='conv',num_classes=100)
+    network = FeedForwardTower(cell_type='conv',num_classes=1000)
 
     adam = optim.AdamW(network.parameters(), lr=0.001)
 
