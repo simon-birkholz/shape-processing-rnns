@@ -59,7 +59,7 @@ def train(model, optimizer, loss_fn, train_loader, val_loader, epochs=20, device
             wandb.log({'training_loss': training_loss})
             print(f'Epoch {epoch}, Training Loss: {training_loss:.2f}')
 
-def learn(allparams, dataset: str, dataset_path: str, **config):
+def learn(allparams, dataset: str, dataset_path: str, save_dir: str, **config):
 
     run = wandb.init(
         project='shape-processing-rnns',
@@ -97,6 +97,12 @@ def learn(allparams, dataset: str, dataset_path: str, **config):
     loss = nn.CrossEntropyLoss()
 
     train(simple_network, adam, loss, train_data_loader, val_data_loader, 20, 'cuda')
+
+    outpath = f'output/{save_dir}'
+
+    print(f'Saving model at {outpath}')
+    torch.save(simple_network.state_dict(),outpath)
+
     run.finish()
 
 
