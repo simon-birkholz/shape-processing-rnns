@@ -50,7 +50,7 @@ class ImageNetKaggle(Dataset):
 
 def get_imagenet_kaggle(path: str) -> Tuple[Dataset,Dataset]:
     tfs = transforms.Compose([
-        transforms.Resize((64, 64)),
+        transforms.Resize((128, 128)),
         transforms.ToTensor(),
         transforms.Normalize(mean=mean, std=std)
     ])
@@ -62,7 +62,7 @@ def get_imagenet_kaggle(path: str) -> Tuple[Dataset,Dataset]:
 
 def get_imagenet(path: str) -> Tuple[Dataset,Dataset]:
     tfs = transforms.Compose([
-        transforms.Resize((64, 64)),
+        transforms.Resize((128, 128)),
         transforms.ToTensor(),
         transforms.Normalize(mean=mean, std=std)
     ])
@@ -75,7 +75,7 @@ def get_imagenet(path: str) -> Tuple[Dataset,Dataset]:
 
 def get_imagenet_small(path: str) -> Tuple[Dataset,Dataset]:
     tfs = transforms.Compose([
-        transforms.Resize((64, 64)),
+        transforms.Resize((224, 224)),
         transforms.ToTensor(),
         transforms.Normalize(mean=mean, std=std)
     ])

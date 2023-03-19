@@ -1,4 +1,4 @@
-from datasets.imagenet import get_imagenet, get_imagenet_small, get_imagenet_kaggle
+
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
@@ -9,6 +9,9 @@ import wandb
 import argparse
 import json
 import os
+
+from datasets.imagenet import get_imagenet, get_imagenet_small, get_imagenet_kaggle
+from models.architecture import FeedForwardTower
 
 def train(model, optimizer, loss_fn, train_loader, val_loader, epochs=20, device='cpu'):
 
@@ -44,7 +47,7 @@ def train(model, optimizer, loss_fn, train_loader, val_loader, epochs=20, device
                 outputs = model(inputs)
                 loss = loss_fn(outputs, targets)
                 val_loss += loss.data.item()
-                correct = torch.eq(torch.max(F.softmax(outputs), dim=1)[1], targets).view(-1)
+                correct = torch.eq(torch.max(outputs, dim=1)[1], targets).view(-1)
     #
                 num_correct += torch.sum(correct).item()
                 num_examples += correct.shape[0]
@@ -54,10 +57,10 @@ def train(model, optimizer, loss_fn, train_loader, val_loader, epochs=20, device
             accuracy = (num_correct/num_examples)
 
             wandb.log({'training_loss' : training_loss, 'val_loss' : val_loss , 'accuracy': accuracy})
-            print(f'Epoch {epoch}, Training Loss: {training_loss:.2f}, Validation Loss: {val_loss:.2f}, Accuracy: {accuracy:.2f}')
+            print(f'Epoch {epoch+1}, Training Loss: {training_loss:.2f}, Validation Loss: {val_loss:.2f}, Accuracy: {accuracy:.2f}')
         else:
             wandb.log({'training_loss': training_loss})
-            print(f'Epoch {epoch}, Training Loss: {training_loss:.2f}')
+            print(f'Epoch {epoch+1}, Training Loss: {training_loss:.2f}')
 
 def learn(allparams, dataset: str, dataset_path: str, save_dir: str, **config):
 
@@ -77,31 +80,28 @@ def learn(allparams, dataset: str, dataset_path: str, save_dir: str, **config):
     else:
         raise ValueError('Unknown Dataset')
 
-    batch_size = 1024
+    batch_size = 256
 
     train_data_loader = data.DataLoader(ds, batch_size=batch_size)
 
     val_data_loader = data.DataLoader(ds_val, batch_size=batch_size) if ds_val else None
 
-    simple_network = nn.Sequential(
-        nn.Conv2d(3, 20, 5),
-        nn.ReLU(),
-        nn.Conv2d(20, 64, 5),
-        nn.ReLU(),
-        nn.Flatten(),
-        nn.Linear(200704, 256)
-    )
+    network = FeedForwardTower(cell_type='conv',num_classes=100)
 
-    adam = optim.AdamW(simple_network.parameters(), lr=0.001)
+    adam = optim.AdamW(network.parameters(), lr=0.001)
+
+    parameter_counter = sum(p.numel() for p in network.parameters())
+
+    print(f'Used network has {parameter_counter} trainable parameters')
 
     loss = nn.CrossEntropyLoss()
 
-    train(simple_network, adam, loss, train_data_loader, val_data_loader, 20, 'cuda')
+    train(network, adam, loss, train_data_loader, val_data_loader, 20, 'cuda')
 
     outpath = f'output/{save_dir}'
 
     print(f'Saving model at {outpath}')
-    torch.save(simple_network.state_dict(),outpath)
+    torch.save(network.state_dict(),outpath)
 
     run.finish()
 
