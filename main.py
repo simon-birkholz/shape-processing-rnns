@@ -86,7 +86,9 @@ def learn(allparams, dataset: str, dataset_path: str, save_dir: str, batch_size:
 
     val_data_loader = data.DataLoader(ds_val, batch_size=batch_size) if ds_val else None
 
-    network = FeedForwardTower(cell_type='conv',num_classes=num_classes)
+    #network = FeedForwardTower(cell_type='conv',num_classes=num_classes)
+
+    network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
 
     adam = optim.AdamW(network.parameters(), lr=0.001)
 
