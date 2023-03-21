@@ -1,4 +1,3 @@
-
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
@@ -14,8 +13,14 @@ from datasets.imagenet import get_imagenet, get_imagenet_small, get_imagenet_kag
 from datasets.ffcv_utils import loader_ffcv_dataset
 from models.architecture import FeedForwardTower
 
-def train(model, optimizer, loss_fn, train_loader, val_loader, epochs=20, device='cpu'):
 
+def train(model,
+          optimizer,
+          loss_fn,
+          train_loader,
+          val_loader,
+          epochs: int,
+          device='cpu'):
     if val_loader:
         print('Detected Validation Dataset')
 
@@ -24,6 +29,8 @@ def train(model, optimizer, loss_fn, train_loader, val_loader, epochs=20, device
         training_loss = 0.0
         val_loss = 0.0
         model.train()
+        train_correct = 0
+        train_samples = 0
         for batch in tqdm(train_loader):
             optimizer.zero_grad()
             inputs, targets = batch
@@ -34,13 +41,17 @@ def train(model, optimizer, loss_fn, train_loader, val_loader, epochs=20, device
             loss.backward()
             optimizer.step()
             training_loss += loss.data.item()
-        training_loss /= len(train_loader)
+            correct = torch.eq(torch.argmax(outputs, dim=1), targets).view(-1)
 
+            train_correct += torch.sum(correct).item()
+            train_samples += correct.shape[0]
+        training_loss /= len(train_loader)
+        train_accuracy = (train_correct / train_samples)
 
         if val_loader:
             model.eval()
-            num_correct = 0
-            num_examples = 0
+            val_correct = 0
+            val_examples = 0
             for batch in val_loader:
                 inputs, targets = batch
                 inputs = inputs.to(device)
@@ -49,22 +60,30 @@ def train(model, optimizer, loss_fn, train_loader, val_loader, epochs=20, device
                 loss = loss_fn(outputs, targets)
                 val_loss += loss.data.item()
                 correct = torch.eq(torch.argmax(outputs, dim=1), targets).view(-1)
-    #
-                num_correct += torch.sum(correct).item()
-                num_examples += correct.shape[0]
+                #
+                val_correct += torch.sum(correct).item()
+                val_examples += correct.shape[0]
             val_loss /= len(val_loader)
 
             # Logging
-            accuracy = (num_correct/num_examples)
+            val_accuracy = (val_correct / val_examples)
 
-            wandb.log({'training_loss' : training_loss, 'val_loss' : val_loss , 'accuracy': accuracy})
-            print(f'Epoch {epoch+1}, Training Loss: {training_loss:.2f}, Validation Loss: {val_loss:.2f}, Accuracy: {accuracy:.2f}')
+            wandb.log({'training_loss': training_loss, 'val_loss': val_loss, 'val_acc': val_accuracy})
+            print(
+                f'\nEpoch {epoch + 1}, Training Loss: {training_loss:.2f}, Training Acc: {train_accuracy:.2f}, Validation Loss: {val_loss:.2f}, Validation Acc: {val_accuracy:.2f}')
         else:
             wandb.log({'training_loss': training_loss})
-            print(f'Epoch {epoch+1}, Training Loss: {training_loss:.2f}')
+            print(f'Epoch {epoch + 1}, Training Loss: {training_loss:.2f}, Training Acc: {train_accuracy:.2f}')
 
-def learn(allparams, dataset: str, dataset_path: str, dataset_val_path: str, save_dir: str, batch_size: int, **config):
 
+def learn(allparams,
+          dataset: str,
+          dataset_path: str,
+          dataset_val_path: str,
+          save_dir: str,
+          batch_size: int,
+          epochs: int,
+          learning_rate: float, **config):
     run = wandb.init(
         project='shape-processing-rnns',
         entity='cenrypol',
@@ -79,9 +98,9 @@ def learn(allparams, dataset: str, dataset_path: str, dataset_val_path: str, sav
     elif dataset == 'imagenet_kaggle':
         ds, ds_val = get_imagenet_kaggle(dataset_path)
     elif dataset == 'ffcv':
-        ds = loader_ffcv_dataset(dataset_path,batch_size)
+        ds = loader_ffcv_dataset(dataset_path, batch_size)
         if dataset_val_path:
-            ds_val = loader_ffcv_dataset(dataset_val_path,batch_size)
+            ds_val = loader_ffcv_dataset(dataset_val_path, batch_size)
     else:
         raise ValueError('Unknown Dataset')
 
@@ -90,7 +109,7 @@ def learn(allparams, dataset: str, dataset_path: str, dataset_val_path: str, sav
     else:
         num_classes = len(ds.classes)
 
-    #train_data_loader, val_data_loader = None, None
+    # train_data_loader, val_data_loader = None, None
     if dataset != 'ffcv':
         train_data_loader = data.DataLoader(ds, batch_size=batch_size)
         val_data_loader = data.DataLoader(ds_val, batch_size=batch_size) if ds_val else None
@@ -98,11 +117,11 @@ def learn(allparams, dataset: str, dataset_path: str, dataset_val_path: str, sav
         train_data_loader = ds
         val_data_loader = ds_val
 
-    network = FeedForwardTower(cell_type='conv',num_classes=num_classes)
+    # network = FeedForwardTower(cell_type='conv',num_classes=num_classes)
 
-    #network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
+    network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
 
-    adam = optim.AdamW(network.parameters(), lr=0.001)
+    adam = optim.AdamW(network.parameters(), lr=learning_rate)
 
     parameter_counter = sum(p.numel() for p in network.parameters())
 
@@ -110,12 +129,12 @@ def learn(allparams, dataset: str, dataset_path: str, dataset_val_path: str, sav
 
     loss = nn.CrossEntropyLoss()
 
-    train(network, adam, loss, train_data_loader, val_data_loader, 20, 'cuda')
+    train(network, adam, loss, train_data_loader, val_data_loader, epochs, 'cuda')
 
     outpath = f'output/{save_dir}'
 
     print(f'Saving model at {outpath}')
-    torch.save(network.state_dict(),outpath)
+    torch.save(network.state_dict(), outpath)
 
     run.finish()
 

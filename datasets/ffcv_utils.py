@@ -40,5 +40,6 @@ def loader_ffcv_dataset(path: str, batch_size: int):
 
     # Replaces PyTorch data loader (`torch.utils.data.Dataloader`)
     loader = Loader(path, batch_size=batch_size, num_workers=8,
-                    order=OrderOption.RANDOM, pipelines=pipelines)
+                    order=OrderOption.RANDOM, pipelines=pipelines,
+                    os_cache=True,drop_last=True)
     return loader
