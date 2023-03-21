@@ -11,6 +11,7 @@ import json
 import os
 
 from datasets.imagenet import get_imagenet, get_imagenet_small, get_imagenet_kaggle
+from datasets.ffcv_utils import loader_ffcv_dataset
 from models.architecture import FeedForwardTower
 
 def train(model, optimizer, loss_fn, train_loader, val_loader, epochs=20, device='cpu'):
@@ -47,7 +48,7 @@ def train(model, optimizer, loss_fn, train_loader, val_loader, epochs=20, device
                 outputs = model(inputs)
                 loss = loss_fn(outputs, targets)
                 val_loss += loss.data.item()
-                correct = torch.eq(torch.max(outputs, dim=1)[1], targets).view(-1)
+                correct = torch.eq(torch.argmax(outputs, dim=1), targets).view(-1)
     #
                 num_correct += torch.sum(correct).item()
                 num_examples += correct.shape[0]
@@ -62,7 +63,7 @@ def train(model, optimizer, loss_fn, train_loader, val_loader, epochs=20, device
             wandb.log({'training_loss': training_loss})
             print(f'Epoch {epoch+1}, Training Loss: {training_loss:.2f}')
 
-def learn(allparams, dataset: str, dataset_path: str, save_dir: str, batch_size: int, **config):
+def learn(allparams, dataset: str, dataset_path: str, dataset_val_path: str, save_dir: str, batch_size: int, **config):
 
     run = wandb.init(
         project='shape-processing-rnns',
@@ -77,18 +78,29 @@ def learn(allparams, dataset: str, dataset_path: str, save_dir: str, batch_size:
         ds, ds_val = get_imagenet_small(dataset_path)
     elif dataset == 'imagenet_kaggle':
         ds, ds_val = get_imagenet_kaggle(dataset_path)
+    elif dataset == 'ffcv':
+        ds = loader_ffcv_dataset(dataset_path,batch_size)
+        if dataset_val_path:
+            ds_val = loader_ffcv_dataset(dataset_val_path,batch_size)
     else:
         raise ValueError('Unknown Dataset')
 
-    num_classes = len(ds.classes)
+    if dataset == 'ffcv':
+        num_classes = 100
+    else:
+        num_classes = len(ds.classes)
 
-    train_data_loader = data.DataLoader(ds, batch_size=batch_size)
+    #train_data_loader, val_data_loader = None, None
+    if dataset != 'ffcv':
+        train_data_loader = data.DataLoader(ds, batch_size=batch_size)
+        val_data_loader = data.DataLoader(ds_val, batch_size=batch_size) if ds_val else None
+    else:
+        train_data_loader = ds
+        val_data_loader = ds_val
 
-    val_data_loader = data.DataLoader(ds_val, batch_size=batch_size) if ds_val else None
+    network = FeedForwardTower(cell_type='conv',num_classes=num_classes)
 
-    #network = FeedForwardTower(cell_type='conv',num_classes=num_classes)
-
-    network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
+    #network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
 
     adam = optim.AdamW(network.parameters(), lr=0.001)
 
@@ -122,12 +134,9 @@ if __name__ == '__main__':
     with open(args.config_file) as f:
         config = json.load(f)
 
+    if 'dataset_val_path' not in config.keys():
+        config['dataset_val_path'] = None
+
     config['save_dir'] = args.out
     allparams = config.copy()
     learn(allparams, **config)
-
-
-
-
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/

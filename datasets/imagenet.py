@@ -7,6 +7,8 @@ import os
 
 from typing import Tuple
 
+from datasets.ffcv_utils import convert_to_ffcv
+
 mean=[0.485, 0.456, 0.406]
 std=[0.229, 0.224, 0.225]
 
@@ -14,6 +16,10 @@ tfs = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
         transforms.Normalize(mean=mean, std=std)
+    ])
+
+tfs_ffcv = transforms.Compose([
+        transforms.Resize((224, 224)),
     ])
 
 
@@ -71,7 +77,7 @@ def get_imagenet(path: str) -> Tuple[Dataset,Dataset]:
     return imagenet , imagenet_val
 
 
-def get_imagenet_small(path: str) -> Tuple[Dataset,Dataset]:
+def get_imagenet_small(path: str, ffcv: bool = False) -> Tuple[Dataset,Dataset]:
 
     #val_to_label = {}
     #with open(os.path.join(path, "Labels.json"), "r") as f:
@@ -80,6 +86,14 @@ def get_imagenet_small(path: str) -> Tuple[Dataset,Dataset]:
     #def to_label(intern: str) -> str:
     #    return val_to_label[intern]
 
-    small_ds = datasets.ImageFolder(os.path.join(path, 'train'), transform=tfs)
-    small_ds_val = datasets.ImageFolder(os.path.join(path, 'val'), transform=tfs)
+    # TODO refactor this shit
+    small_ds = datasets.ImageFolder(os.path.join(path, 'train'), transform=tfs if not ffcv else tfs_ffcv)
+    small_ds_val = datasets.ImageFolder(os.path.join(path, 'val'), transform=tfs if not ffcv else tfs_ffcv)
     return small_ds, small_ds_val
+
+if __name__ == '__main__':
+
+    small, small_val = get_imagenet_small('S:\\datasets\\imagenet_100', True)
+
+    convert_to_ffcv('S:\\datasets\\imagenet_100_train.beton',small)
+    convert_to_ffcv('S:\\datasets\\imagenet_100_val.beton',small_val)
