@@ -136,7 +136,7 @@ def learn(allparams,
 
     print(f'Saving model at {outpath}')
     if not os.path.exists(outpath):
-        os.mkdir(outpath)
+        os.makedirs(outpath, exist_ok=True)
     torch.save(network.state_dict(), outpath)
 
     run.finish()
