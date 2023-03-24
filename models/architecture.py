@@ -13,10 +13,12 @@ KernelArg = Union[int, Sequence[int]]
 class FeedForwardTower(torch.nn.Module):
     def __init__(self,
                  cell_type='conv',
-                 num_classes=1000):
+                 num_classes=1000,
+                 classifier_head=False):
         super().__init__()
         self.cell_type = cell_type
         self.num_classes = num_classes
+        self.classifier_head=classifier_head
 
         if self.cell_type == 'conv':
             def get_cell(*args,**kwargs):
@@ -46,11 +48,14 @@ class FeedForwardTower(torch.nn.Module):
         self.bn4 = nn.BatchNorm2d(256)
         self.conv5 = nn.Conv2d(256, 512, 3, 1)
         self.bn5 = nn.BatchNorm2d(512)
-        self.conv6 = nn.Conv2d(512, 512, 1, 2)
+
+        if self.classifier_head:
+            self.conv6 = nn.Conv2d(512, 512, 1, 2)
+            self.classifier = nn.Linear(512,self.num_classes)
+        else:
+            self.conv6 = nn.Conv2d(512, self.num_classes, 1, 2)
+
         self.flatten = nn.Flatten()
-
-        self.classifier = nn.Linear(512,self.num_classes)
-
         self.pooling = nn.MaxPool2d(kernel_size=2)
         self.activation = F.relu
 
@@ -76,10 +81,16 @@ class FeedForwardTower(torch.nn.Module):
         x = self.activation(x)
         x = self.bn5(x)
         x = self.pooling(x)
-        x = self.conv6(x)
-        x = self.activation(x)
-        x = self.flatten(x)
-        x = self.classifier(x)
+
+        if self.classifier_head:
+            x = self.conv6(x)
+            x = self.activation(x)
+            x = self.flatten(x)
+            x = self.classifier(x)
+        else:
+            x = self.conv6(x)
+            x = self.flatten(x)
+
         x = F.softmax(x,dim=1)
         return x
 
