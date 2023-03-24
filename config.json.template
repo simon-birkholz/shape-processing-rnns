@@ -1,5 +1,7 @@
 {
 	"dataset" : "imagenet_small",
 	"dataset_path" : "${DATASET_PATH}",
-	"batch_size" : 1024
+	"batch_size" : 1024,
+	"epochs" : 20,
+	"learning_rate" : 0.001
 }

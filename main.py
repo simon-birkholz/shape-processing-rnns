@@ -11,6 +11,7 @@ import os
 
 from datasets.imagenet import get_imagenet, get_imagenet_small, get_imagenet_kaggle
 from datasets.ffcv_utils import loader_ffcv_dataset
+from datasets.cifar import get_imagenet_cifar10
 from models.architecture import FeedForwardTower
 
 
@@ -41,10 +42,9 @@ def train(model,
             loss.backward()
             optimizer.step()
             training_loss += loss.data.item()
-            correct = torch.eq(torch.argmax(outputs, dim=1), targets).view(-1)
-
-            train_correct += torch.sum(correct).item()
-            train_samples += correct.shape[0]
+            predicted = torch.argmax(outputs, dim=1)
+            train_correct += torch.sum(predicted == targets).item()
+            train_samples += predicted.shape[0]
         training_loss /= len(train_loader)
         train_accuracy = (train_correct / train_samples)
 
@@ -59,20 +59,19 @@ def train(model,
                 outputs = model(inputs)
                 loss = loss_fn(outputs, targets)
                 val_loss += loss.data.item()
-                correct = torch.eq(torch.argmax(outputs, dim=1), targets).view(-1)
-                #
-                val_correct += torch.sum(correct).item()
-                val_examples += correct.shape[0]
+                predicted = torch.argmax(outputs, dim=1)
+                val_correct += torch.sum(predicted == targets).item()
+                val_examples += predicted.shape[0]
             val_loss /= len(val_loader)
 
             # Logging
             val_accuracy = (val_correct / val_examples)
 
-            wandb.log({'training_loss': training_loss, 'val_loss': val_loss, 'val_acc': val_accuracy})
+            wandb.log({'training_loss': training_loss, 'train_acc': train_accuracy, 'val_loss': val_loss, 'val_acc': val_accuracy})
             print(
                 f'\nEpoch {epoch + 1}, Training Loss: {training_loss:.2f}, Training Acc: {train_accuracy:.2f}, Validation Loss: {val_loss:.2f}, Validation Acc: {val_accuracy:.2f}')
         else:
-            wandb.log({'training_loss': training_loss})
+            wandb.log({'training_loss': training_loss, 'train_acc': train_accuracy})
             print(f'Epoch {epoch + 1}, Training Loss: {training_loss:.2f}, Training Acc: {train_accuracy:.2f}')
 
 
@@ -101,6 +100,8 @@ def learn(allparams,
         ds = loader_ffcv_dataset(dataset_path, batch_size)
         if dataset_val_path:
             ds_val = loader_ffcv_dataset(dataset_val_path, batch_size)
+    elif dataset == 'cifar10':
+        ds, ds_val = get_imagenet_cifar10(dataset_path)
     else:
         raise ValueError('Unknown Dataset')
 
@@ -134,6 +135,8 @@ def learn(allparams,
     outpath = f'output/{save_dir}'
 
     print(f'Saving model at {outpath}')
+    if not os.path.exists(outpath):
+        os.mkdir(outpath)
     torch.save(network.state_dict(), outpath)
 
     run.finish()
