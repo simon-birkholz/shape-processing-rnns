@@ -25,3 +25,12 @@ def get_imagenet_cifar10(path: str) -> Tuple[Dataset,Dataset]:
     imagenet_val =  datasets.CIFAR10(root=path, transform=tfs, train=False, download=True)
     # imagenet_val = datasets.ImageNet(path, split='val')
     return imagenet, imagenet_val
+
+def get_imagenet_cifar100(path: str) -> Tuple[Dataset,Dataset]:
+    import ssl
+    ssl._create_default_https_context = ssl._create_unverified_context
+    # TODO move into context
+    imagenet = datasets.CIFAR100(root=path, transform=tfs, train=True, download=True)
+    imagenet_val =  datasets.CIFAR100(root=path, transform=tfs, train=False, download=True)
+    # imagenet_val = datasets.ImageNet(path, split='val')
+    return imagenet, imagenet_val
