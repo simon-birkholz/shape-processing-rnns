@@ -146,19 +146,21 @@ if __name__ == '__main__':
     print(f'CUDA: {torch.cuda.is_available()}')
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('config_file', type=str, help='Config file for models')
+    parser.add_argument('config_file', type=str, help='Config file for models', nargs='+')
     parser.add_argument('--out', type=str, help='name for saving the model', default='test_run')
 
     args = parser.parse_args()
+    print(f'Executing {len(args.config_file)} configs: {" ".join(args.config_file)}')
 
-    if not os.path.exists(args.config_file):
-        raise ValueError("No config file found")
-    with open(args.config_file) as f:
-        config = json.load(f)
+    for cfg_file in args.config_file:
+        if not os.path.exists(cfg_file):
+            raise ValueError(f"Config file {cfg_file} not found")
+        with open(cfg_file) as f:
+            config = json.load(f)
 
-    if 'dataset_val_path' not in config.keys():
-        config['dataset_val_path'] = None
+        if 'dataset_val_path' not in config.keys():
+            config['dataset_val_path'] = None
 
-    config['save_dir'] = args.out
-    allparams = config.copy()
-    learn(allparams, **config)
+        config['save_dir'] = args.out
+        allparams = config.copy()
+        learn(allparams, **config)
