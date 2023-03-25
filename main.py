@@ -1,7 +1,6 @@
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-import torch.utils.data as data
 import torch.nn as nn
 from tqdm import tqdm
 import wandb
@@ -9,9 +8,7 @@ import argparse
 import json
 import os
 
-from datasets.imagenet import get_imagenet, get_imagenet_small, get_imagenet_kaggle
-from datasets.ffcv_utils import loader_ffcv_dataset
-from datasets.cifar import get_imagenet_cifar10
+from datasets.selection import select_dataset
 from models.architecture import FeedForwardTower
 
 
@@ -67,7 +64,8 @@ def train(model,
             # Logging
             val_accuracy = (val_correct / val_examples)
 
-            wandb.log({'training_loss': training_loss, 'train_acc': train_accuracy, 'val_loss': val_loss, 'val_acc': val_accuracy})
+            wandb.log({'training_loss': training_loss, 'train_acc': train_accuracy, 'val_loss': val_loss,
+                       'val_acc': val_accuracy})
             print(
                 f'\nEpoch {epoch + 1}, Training Loss: {training_loss:.2f}, Training Acc: {train_accuracy:.2f}, Validation Loss: {val_loss:.2f}, Validation Acc: {val_accuracy:.2f}')
         else:
@@ -88,35 +86,11 @@ def learn(allparams,
         entity='cenrypol',
         config=dict(params=allparams)
     )
+    # TODO wandb as context manager
+    # TODO dataset selection as context manager (datasets,validation sets and number of classes)
+    # TODO checkpoints and saving as context manager
 
-    ds, ds_val = None, None
-    if dataset == 'imagenet':
-        ds, ds_val = get_imagenet(dataset_path)
-    elif dataset == 'imagenet_small':
-        ds, ds_val = get_imagenet_small(dataset_path)
-    elif dataset == 'imagenet_kaggle':
-        ds, ds_val = get_imagenet_kaggle(dataset_path)
-    elif dataset == 'ffcv':
-        ds = loader_ffcv_dataset(dataset_path, batch_size)
-        if dataset_val_path:
-            ds_val = loader_ffcv_dataset(dataset_val_path, batch_size)
-    elif dataset == 'cifar10':
-        ds, ds_val = get_imagenet_cifar10(dataset_path)
-    else:
-        raise ValueError('Unknown Dataset')
-
-    if dataset == 'ffcv':
-        num_classes = 100
-    else:
-        num_classes = len(ds.classes)
-
-    # train_data_loader, val_data_loader = None, None
-    if dataset != 'ffcv':
-        train_data_loader = data.DataLoader(ds, batch_size=batch_size)
-        val_data_loader = data.DataLoader(ds_val, batch_size=batch_size) if ds_val else None
-    else:
-        train_data_loader = ds
-        val_data_loader = ds_val
+    train_data_loader, val_data_loader, num_classes = select_dataset(dataset, dataset_path, dataset_val_path, batch_size)
 
     # network = FeedForwardTower(cell_type='conv',num_classes=num_classes)
 
@@ -135,12 +109,11 @@ def learn(allparams,
     outpath = f'output/{save_dir}'
 
     print(f'Saving model at {outpath}')
-    if not os.path.exists(outpath):
-        os.makedirs(outpath, exist_ok=True)
+    if not os.path.exists('output'):
+        os.makedirs('output', exist_ok=True)
     torch.save(network.state_dict(), outpath)
 
     run.finish()
-
 
 if __name__ == '__main__':
     print(f'CUDA: {torch.cuda.is_available()}')

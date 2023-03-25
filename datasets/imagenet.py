@@ -9,6 +9,8 @@ from typing import Tuple
 
 from datasets.ffcv_utils import convert_to_ffcv
 
+import argparse
+
 mean=[0.485, 0.456, 0.406]
 std=[0.229, 0.224, 0.225]
 
@@ -62,10 +64,10 @@ class ImageNetKaggle(Dataset):
                 x = self.transform(x)
             return x, self.targets[idx]
 
-def get_imagenet_kaggle(path: str) -> Tuple[Dataset,Dataset]:
+def get_imagenet_kaggle(path: str, ffcv: bool = False) -> Tuple[Dataset,Dataset]:
 
-    imagenet = ImageNetKaggle(path, transform=tfs, split='train')
-    imagenet_val = ImageNetKaggle(path, transform=tfs, split='val')
+    imagenet = ImageNetKaggle(path, transform=tfs if not ffcv else tfs_ffcv, split='train')
+    imagenet_val = ImageNetKaggle(path, transform=tfs if not ffcv else tfs_ffcv, split='val')
     # imagenet_val = datasets.ImageNet(path, split='val')
     return imagenet, imagenet_val
 
@@ -93,7 +95,21 @@ def get_imagenet_small(path: str, ffcv: bool = False) -> Tuple[Dataset,Dataset]:
 
 if __name__ == '__main__':
 
-    small, small_val = get_imagenet_small('S:\\datasets\\imagenet_100', True)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('dataset', type=str, help='Dataset to process', required=True)
+    parser.add_argument('--path', type=str, help='Path to the dataset', required=True)
 
-    convert_to_ffcv('S:\\datasets\\imagenet_100_train.beton',small)
-    convert_to_ffcv('S:\\datasets\\imagenet_100_val.beton',small_val)
+    args = parser.parse_args()
+
+    if args.dataset == 'imagenet_kaggle':
+        ds, ds_val = get_imagenet_kaggle(args.path,True)
+    elif args.dataset == 'imagenet_small':
+        ds, ds_val =  get_imagenet_small(args.path, True)
+    else:
+        raise ValueError('Dataset not found')
+
+    train_path_out = f'{args.path}_train.beton'
+    val_path_out = f'{args.path}_val.beton'
+
+    convert_to_ffcv(train_path_out, ds)
+    convert_to_ffcv(val_path_out,ds_val)
