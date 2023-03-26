@@ -92,9 +92,9 @@ def learn(allparams,
 
     train_data_loader, val_data_loader, num_classes = select_dataset(dataset, dataset_path, dataset_val_path, batch_size)
 
-    # network = FeedForwardTower(cell_type='conv',num_classes=num_classes)
+    network = FeedForwardTower(cell_type='conv',num_classes=num_classes)
 
-    network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
+    #network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
 
     adam = optim.AdamW(network.parameters(), lr=learning_rate)
 
