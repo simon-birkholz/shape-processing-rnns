@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 
 from .utils import _pair
-from cells import ConvRNNCell, ConvGruCell, ConvLSTMCell, ReciprocalGatedCell
+from models.cells import ConvRNNCell, ConvGruCell, ConvLSTMCell, ReciprocalGatedCell
 
 KernelArg = Union[int, Sequence[int]]
 
