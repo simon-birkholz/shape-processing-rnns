@@ -25,7 +25,7 @@ def select_dataset(dataset: str, dataset_path: str, dataset_val_path: str, batch
         raise ValueError('Unknown Dataset')
 
     if dataset == 'ffcv':
-        num_classes = 100
+        num_classes = 1000
     else:
         num_classes = len(ds.classes)
 

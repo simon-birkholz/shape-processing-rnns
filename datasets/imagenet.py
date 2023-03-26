@@ -96,7 +96,7 @@ def get_imagenet_small(path: str, ffcv: bool = False) -> Tuple[Dataset,Dataset]:
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('dataset', type=str, help='Dataset to process', required=True)
+    parser.add_argument('dataset', type=str, help='Dataset to process')
     parser.add_argument('--path', type=str, help='Path to the dataset', required=True)
 
     args = parser.parse_args()
