@@ -54,7 +54,7 @@ class FeedForwardTower(torch.nn.Module):
         self.cell4 = get_cell(256, 256,self.cell_kernel)
         self.bn4 = nn.BatchNorm2d(256)
         self.conv5 = nn.Conv2d(256, 512, 3, 1)
-        self.cell5 = get_cell(256, 256,self.cell_kernel)
+        self.cell5 = get_cell(512, 512,self.cell_kernel)
         self.bn5 = nn.BatchNorm2d(512)
 
         if self.classifier_head:
