@@ -25,5 +25,5 @@ echo "cat $CONF_IN | envsubst > $CONF_READY" >> $JOB
 
 echo "python main.py $CONF_READY" >> $JOB
 
-#sbatch -p gpu_4_a100 -t 24:00:00 $JOB
+sbatch -p gpu_4_a100 -t 24:00:00 $JOB
 
