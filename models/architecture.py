@@ -25,7 +25,7 @@ class FeedForwardTower(torch.nn.Module):
 
         if self.cell_type == 'conv':
             def get_cell(*args,**kwargs):
-                return torch.nn.Conv2d(*args,**kwargs)
+                return torch.nn.Conv2d(*args,**kwargs, padding='same')
         elif self.cell_type == 'gru':
             def get_cell(*args,**kwargs):
                 return ConvGruCell(*args,**kwargs)
@@ -54,7 +54,7 @@ class FeedForwardTower(torch.nn.Module):
         self.cell4 = get_cell(256, 256,self.cell_kernel)
         self.bn4 = nn.BatchNorm2d(256)
         self.conv5 = nn.Conv2d(256, 512, 3, 1)
-        #self.cell5 = get_cell(512, 512,self.cell_kernel)
+        self.cell5 = get_cell(512, 512,self.cell_kernel)
         self.bn5 = nn.BatchNorm2d(512)
 
         if self.classifier_head:
@@ -95,8 +95,8 @@ class FeedForwardTower(torch.nn.Module):
         x = self.pooling(x)
         x = self.conv5(x)
         x = self.activation(x)
-        #x = self.cell5(x)
-        #x = self.activation(x)
+        x = self.cell5(x)
+        x = self.activation(x)
         x = self.bn5(x)
         x = self.pooling(x)
 

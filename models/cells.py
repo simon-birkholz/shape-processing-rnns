@@ -36,9 +36,9 @@ class ConvRNNCell(torch.nn.Module):
         # In our formulas option 3 is used for all gates
 
         # todo padding und bias
-        self.x2h = nn.Conv2d(in_channels=in_channels,out_channels=out_channels, kernel_size=kernel_size)
+        self.x2h = nn.Conv2d(in_channels=in_channels,out_channels=out_channels, kernel_size=kernel_size,padding='same')
 
-        self.h2h = nn.Conv2d(in_channels=out_channels,out_channels=out_channels,kernel_size=kernel_size)
+        self.h2h = nn.Conv2d(in_channels=out_channels,out_channels=out_channels,kernel_size=kernel_size,padding='same')
 
     def forward(self,input ,hx=None):
         # Inputs:
@@ -67,15 +67,15 @@ class ConvGruCell(torch.nn.Module):
         self.nonlinearity = 'relu'
 
         # reset gate
-        self.wr = nn.Conv2d(in_channels=in_channels,out_channels=out_channels, kernel_size=kernel_size)
-        self.ur = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size)
+        self.wr = nn.Conv2d(in_channels=in_channels,out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.ur = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
 
         # update gate
-        self.wz = nn.Conv2d(in_channels=in_channels,out_channels=out_channels, kernel_size=kernel_size)
-        self.uz = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size)
+        self.wz = nn.Conv2d(in_channels=in_channels,out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.uz = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
 
         # state candidate
-        self.can = nn.Conv2d(in_channels=in_channels + out_channels, out_channels=out_channels, kernel_size=kernel_size)
+        self.can = nn.Conv2d(in_channels=in_channels + out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
 
     def forward(self,input ,hx=None):
         # Inputs:
@@ -114,22 +114,22 @@ class ConvLSTMCell(torch.nn.Module):
         self.nonlinearity = 'relu'
 
         # reset/forget gate
-        self.wf = nn.Conv2d(in_channels=in_channels,out_channels=out_channels, kernel_size=kernel_size)
-        self.uf = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size)
-        self.vf = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size)
+        self.wf = nn.Conv2d(in_channels=in_channels,out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.uf = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.vf = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
 
         # input gate
-        self.wi = nn.Conv2d(in_channels=in_channels,out_channels=out_channels, kernel_size=kernel_size)
-        self.ui = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size)
-        self.vi = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size)
+        self.wi = nn.Conv2d(in_channels=in_channels,out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.ui = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.vi = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
 
         # output gate
-        self.wo = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size)
-        self.uo = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size)
-        self.vo = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size)
+        self.wo = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.uo = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.vo = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
 
         # state candidate
-        self.can = nn.Conv2d(in_channels=in_channels + out_channels, out_channels=out_channels, kernel_size=kernel_size)
+        self.can = nn.Conv2d(in_channels=in_channels + out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
 
     def forward(self,input ,hidden_state=None):
         # Inputs:
@@ -174,12 +174,12 @@ class ReciprocalGatedCell(torch.nn.Module):
         self.nonlinearity = 'relu'
 
         # output gating
-        self.wch = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size)
-        self.whh = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size)
+        self.wch = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.whh = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
 
         # memory gating
-        self.whc = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size)
-        self.wcc = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size)
+        self.whc = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.wcc = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
 
     def forward(self,input ,hidden_state=None):
 
