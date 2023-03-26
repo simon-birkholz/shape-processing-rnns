@@ -80,7 +80,10 @@ def learn(allparams,
           save_dir: str,
           batch_size: int,
           epochs: int,
-          learning_rate: float, **config):
+          learning_rate: float,
+          model_base: str,
+          optimizer: str,
+          **config):
     run = wandb.init(
         project='shape-processing-rnns',
         entity='cenrypol',
@@ -92,11 +95,19 @@ def learn(allparams,
 
     train_data_loader, val_data_loader, num_classes = select_dataset(dataset, dataset_path, dataset_val_path, batch_size)
 
-    network = FeedForwardTower(cell_type='conv',num_classes=num_classes)
+    if model_base == 'ff_tower':
+        network = FeedForwardTower(cell_type='conv',num_classes=num_classes)
+    elif model_base == 'resnet18':
+        network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
+    else:
+        raise ValueError(f'Unknown base architecture {model_base}')
 
-    #network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
-
-    adam = optim.AdamW(network.parameters(), lr=learning_rate)
+    if optimizer == 'adam':
+        opti = optim.AdamW(network.parameters(), lr=learning_rate)
+    elif optimizer == 'sgd':
+        opti = optim.SGD(network.parameters(), lr=learning_rate)
+    else:
+        raise ValueError(f'Unknown optimizer {optimizer}')
 
     parameter_counter = sum(p.numel() for p in network.parameters())
 
@@ -104,7 +115,7 @@ def learn(allparams,
 
     loss = nn.CrossEntropyLoss()
 
-    train(network, adam, loss, train_data_loader, val_data_loader, epochs, 'cuda')
+    train(network, opti, loss, train_data_loader, val_data_loader, epochs, 'cuda')
 
     outpath = f'output/{save_dir}'
 

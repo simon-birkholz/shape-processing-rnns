@@ -2,8 +2,6 @@ from typing import Union, Sequence
 
 import torch
 import torch.nn as nn
-from torch.nn import Parameter
-from torch.nn.utils.rnn import PackedSequence
 import torch.nn.functional as F
 from torch.autograd import Variable
 
