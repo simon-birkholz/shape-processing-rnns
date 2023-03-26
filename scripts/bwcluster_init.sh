@@ -12,12 +12,14 @@ mkdir -p tmp
 CONF_IN=tmp/config-$RAND_ID.json.in
 CONF_READY=tmp/config-$RAND_ID.json
 JOB=tmp/job-$RAND_ID.sh
+OUT=tmp/slurm-$RAND_ID.out
 
 cp config.json.in $CONF_IN
 
 touch $JOB
 
 cat scripts/preamble.sh >> $JOB
+echo "#SBATCH --output=$OUT" >> $JOB
 
 cat scripts/bwcluster_pre.sh >> $JOB
 
