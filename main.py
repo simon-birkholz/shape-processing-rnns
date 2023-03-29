@@ -8,19 +8,29 @@ import argparse
 import json
 import os
 
+from typing import Union
+
 from datasets.selection import select_dataset
 from models.architecture import FeedForwardTower
 
+from utils import EarlyStopping
 
 def train(model,
           optimizer,
           loss_fn,
           train_loader,
           val_loader,
-          epochs: int,
+          epochs: Union[int,str],
           device='cpu'):
     if val_loader:
         print('Detected Validation Dataset')
+
+    do_early_stopping = False
+    if epochs == 'early-stop':
+        epochs = 100
+        do_early_stopping = True
+        early_stopping = EarlyStopping(tolerance=5)
+
 
     model.to(device)
     for epoch in range(epochs):
@@ -68,6 +78,9 @@ def train(model,
                        'val_acc': val_accuracy})
             print(
                 f'\nEpoch {epoch + 1}, Training Loss: {training_loss:.2f}, Training Acc: {train_accuracy:.2f}, Validation Loss: {val_loss:.2f}, Validation Acc: {val_accuracy:.2f}')
+            if do_early_stopping and early_stopping(val_loss):
+                print(f'Early stopping after epoch {epoch+1}')
+                return
         else:
             wandb.log({'training_loss': training_loss, 'train_acc': train_accuracy})
             print(f'Epoch {epoch + 1}, Training Loss: {training_loss:.2f}, Training Acc: {train_accuracy:.2f}')
@@ -79,7 +92,7 @@ def learn(allparams,
           dataset_val_path: str,
           save_dir: str,
           batch_size: int,
-          epochs: int,
+          epochs: Union[int,str],
           learning_rate: float,
           model_base: str,
           optimizer: str,
