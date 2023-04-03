@@ -43,17 +43,31 @@ WIDER_FILTERS = [128, 512, 512, 512, 1024]
 DEEPER_FILTERS = [64, 64, 64, 128, 128, 256, 256, 512, 512, 512]
 
 
+class AxuilaryClassifier(torch.nn.Module):
+
+    def __init__(self, in_channels, out_classes, activation, normalization):
+        super().__init__()
+        self.model = nn.Sequential(nn.AvgPool2d(kernel_size=5, stride=3),
+                                   ConvBlock(in_channels, 128, 1, 1, activation, normalization), nn.Flatten(),
+                                   nn.Linear(1152, 1024), nn.Linear(1024, 1000), nn.Softmax(dim=1))
+
+    def forward(self, x):
+        return self.model(x)
+
+
 class FeedForwardTower(torch.nn.Module):
     def __init__(self,
                  tower_type='normal',
                  cell_type='conv',
                  activation='relu',
                  num_classes=1000,
-                 cell_kernel=3):
+                 cell_kernel=3,
+                 auxiliary_classifier=True):
         super().__init__()
         self.cell_type = cell_type
         self.num_classes = num_classes
         self.cell_kernel = cell_kernel
+        self.auxiliary_classifier=auxiliary_classifier
 
         if self.cell_type == 'conv':
             def get_cell(*args, **kwargs):
@@ -93,23 +107,39 @@ class FeedForwardTower(torch.nn.Module):
         stride_sizes = [2] + [1] * (len(filter_counts) - 2)
         print(kernel_sizes)
 
-        self.conv_blocks = nn.ModuleList([ConvBlock(ins, outs, ks, ss, self.activation, 'batchnorm') for (ins, outs), ks, ss in
-                            zip(pairwise(filter_counts), kernel_sizes, stride_sizes)])
+        self.conv_blocks = nn.ModuleList(
+            [ConvBlock(ins, outs, ks, ss, self.activation, 'batchnorm') for (ins, outs), ks, ss in
+             zip(pairwise(filter_counts), kernel_sizes, stride_sizes)])
 
         self.last_conv = nn.Conv2d(filter_counts[-1], self.num_classes, 2, 1, padding='same')
 
         self.flatten = nn.Flatten()
         self.pooling = nn.MaxPool2d(kernel_size=2)
 
+        if self.auxiliary_classifier:
+            self.layer_two_thirds = int(len(filter_counts) * (2/3)) -1
+            self.aux_cls = AxuilaryClassifier(filter_counts[self.layer_two_thirds],num_classes,self.activation,'batchnorm')
+
+
+
     def forward(self, x):
 
-        for block in self.conv_blocks:
+        aux_input = None
+        for idx, block in enumerate(self.conv_blocks):
             x = block(x)
+
+            if self.auxiliary_classifier and self.layer_two_thirds == idx:
+                aux_input = x
+
             x = self.pooling(x)
 
         x = self.last_conv(x)
         x = self.flatten(x)
 
         x = F.softmax(x, dim=1)
-        x = nn.Dropout(0.5)(x)
+
+        if self.auxiliary_classifier:
+            aux_output = self.aux_cls(aux_input)
+            return x, aux_output
+
         return x
