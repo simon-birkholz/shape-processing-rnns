@@ -3,7 +3,7 @@ from typing import Union, Sequence
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+import functools
 
 from .utils import _pair
 from models.cells import ConvRNNCell, ConvGruCell, ConvLSTMCell, ReciprocalGatedCell
@@ -14,6 +14,7 @@ KernelArg = Union[int, Sequence[int]]
 class FeedForwardTower(torch.nn.Module):
     def __init__(self,
                  cell_type='conv',
+                 activation='relu',
                  num_classes=1000,
                  cell_kernel=3,
                  classifier_head=False):
@@ -65,7 +66,12 @@ class FeedForwardTower(torch.nn.Module):
 
         self.flatten = nn.Flatten()
         self.pooling = nn.MaxPool2d(kernel_size=2)
-        self.activation = F.relu
+        if activation == 'relu':
+            self.activation = F.relu
+        elif activation == 'elu':
+            self.activation = functools.partial(F.elu,alpha=1.0)
+        else:
+            raise ValueError('Unknown activation function')
 
 
     def forward(self,x):
