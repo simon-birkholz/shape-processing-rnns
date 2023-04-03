@@ -7,6 +7,7 @@ import wandb
 import argparse
 import json
 import os
+from pathlib import Path
 
 from typing import Union
 
@@ -130,11 +131,12 @@ def learn(allparams,
 
     train(network, opti, loss, train_data_loader, val_data_loader, epochs, 'cuda')
 
-    outpath = f'output/{save_dir}'
+    outpath = f'{save_dir}'
+    outparent =Path(save_dir).parent.absolute()
 
     print(f'Saving model at {outpath}')
-    if not os.path.exists('output'):
-        os.makedirs('output', exist_ok=True)
+    if not os.path.exists(outparent):
+        os.makedirs(outparent, exist_ok=True)
     torch.save(network.state_dict(), outpath)
 
     run.finish()
