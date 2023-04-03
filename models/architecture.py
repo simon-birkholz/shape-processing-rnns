@@ -111,4 +111,5 @@ class FeedForwardTower(torch.nn.Module):
         x = self.flatten(x)
 
         x = F.softmax(x, dim=1)
+        x = nn.Dropout(0.2)(x)
         return x
