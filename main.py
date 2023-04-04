@@ -127,7 +127,7 @@ def learn(allparams,
                                                                      batch_size)
 
     if model_base == 'ff_tower':
-        network = FeedForwardTower(num_classes=num_classes, **config)
+        network = torch.compile(FeedForwardTower(num_classes=num_classes, **config))
     elif model_base == 'resnet18':
         network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
     else:
