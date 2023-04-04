@@ -47,13 +47,13 @@ def train(model,
             inputs, targets = batch
             inputs = inputs.to(device)
             targets = targets.to(device)
-            #if aux_cls:
+            # if aux_cls:
             #    outputs, aux_out = model(inputs)
             #    loss_m = loss_fn(outputs, targets)
             #    loss_aux = loss_fn(aux_out, targets)
             #    auxiliary_loss += loss_aux.data.item()
             #    loss = loss_m + aux_discount * loss_aux
-            #else:
+            # else:
             outputs = model(inputs)
             loss = loss_fn(outputs, targets)
             loss.backward()
@@ -75,9 +75,9 @@ def train(model,
                 inputs = inputs.to(device)
                 targets = targets.to(device)
                 # Dont care for aux classifier during validation
-                #if aux_cls:
+                # if aux_cls:
                 #    outputs, _ = model(inputs)
-                #else:
+                # else:
                 outputs = model(inputs)
                 loss = loss_fn(outputs, targets)
                 val_loss += loss.data.item()
@@ -112,8 +112,13 @@ def learn(allparams,
           learning_rate: float,
           model_base: str,
           optimizer: str,
+          batch_frag: 1,
           **config):
-    allparams['normalized_lr'] = learning_rate * batch_size # learning rate is dependent on the batch size
+    allparams['normalized_lr'] = learning_rate * batch_size  # learning rate is dependent on the batch size
+    intern_batch_size = batch_size / batch_frag
+    intern_learning_rate = learning_rate / batch_frag
+    allparams['internal_batch_size'] = intern_batch_size
+    allparams['internal_lr'] = intern_learning_rate
     run = wandb.init(
         project='shape-processing-rnns',
         entity='cenrypol',
@@ -124,7 +129,7 @@ def learn(allparams,
     # TODO checkpoints and saving as context manager
 
     train_data_loader, val_data_loader, num_classes = select_dataset(dataset, dataset_path, dataset_val_path,
-                                                                     batch_size)
+                                                                     intern_batch_size)
 
     if model_base == 'ff_tower':
         network = FeedForwardTower(num_classes=num_classes, **config)
@@ -134,9 +139,9 @@ def learn(allparams,
         raise ValueError(f'Unknown base architecture {model_base}')
 
     if optimizer == 'adam':
-        opti = optim.AdamW(network.parameters(), lr=learning_rate)
+        opti = optim.AdamW(network.parameters(), lr=intern_learning_rate)
     elif optimizer == 'sgd':
-        opti = optim.SGD(network.parameters(), lr=learning_rate)
+        opti = optim.SGD(network.parameters(), lr=intern_learning_rate)
     else:
         raise ValueError(f'Unknown optimizer {optimizer}')
 

@@ -8,5 +8,6 @@
 	"optimizer" : "adam",
 	"cell_type" : "conv",
 	"activation" : "elu",
-	"time_steps" : 10
+	"time_steps" : 10,
+	"batch_frag" : 2
 }
