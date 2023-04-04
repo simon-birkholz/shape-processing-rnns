@@ -45,7 +45,7 @@ class ConvWrapper(nn.Module):
         self.activation = F.relu
 
     def forward(self, x, hx=None):
-       return self.activation(self.conv)
+       return self.activation(self.conv(x))
 
 
 NORMAL_FILTERS = [64, 128, 256, 256, 512]
