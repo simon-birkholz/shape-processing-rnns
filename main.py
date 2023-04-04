@@ -1,19 +1,17 @@
-import torch
-import torch.nn.functional as F
-import torch.optim as optim
-import torch.nn as nn
-from tqdm import tqdm
-import wandb
 import argparse
 import json
 import os
 from pathlib import Path
-
 from typing import Union
 
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from tqdm import tqdm
+
+import wandb
 from datasets.selection import select_dataset
 from models.architecture import FeedForwardTower
-
 from utils import EarlyStopping
 
 
@@ -22,6 +20,7 @@ def train(model,
           loss_fn,
           train_loader,
           val_loader,
+          *,
           epochs: Union[int, str],
           aux_cls: bool = False,
           device='cpu'):
@@ -127,7 +126,7 @@ def learn(allparams,
                                                                      batch_size)
 
     if model_base == 'ff_tower':
-        network = torch.compile(FeedForwardTower(num_classes=num_classes,auxiliary_classifier=False, **config))
+        network = torch.compile(FeedForwardTower(num_classes=num_classes, **config))
     elif model_base == 'resnet18':
         network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
     else:
@@ -146,7 +145,7 @@ def learn(allparams,
 
     loss = nn.CrossEntropyLoss()
 
-    train(network, opti, loss, train_data_loader, val_data_loader, epochs, 'cuda')
+    train(network, opti, loss, train_data_loader, val_data_loader, epochs=epochs, device='cuda')
 
     outpath = f'{save_dir}'
     outparent = Path(save_dir).parent.absolute()
