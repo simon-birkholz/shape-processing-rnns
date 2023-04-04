@@ -47,15 +47,15 @@ def train(model,
             inputs, targets = batch
             inputs = inputs.to(device)
             targets = targets.to(device)
-            if aux_cls:
-                outputs, aux_out = model(inputs)
-                loss_m = loss_fn(outputs, targets)
-                loss_aux = loss_fn(aux_out, targets)
-                auxiliary_loss += loss_aux.data.item()
-                loss = loss_m + aux_discount * loss_aux
-            else:
-                outputs = model(inputs)
-                loss = loss_fn(outputs, targets)
+            #if aux_cls:
+            #    outputs, aux_out = model(inputs)
+            #    loss_m = loss_fn(outputs, targets)
+            #    loss_aux = loss_fn(aux_out, targets)
+            #    auxiliary_loss += loss_aux.data.item()
+            #    loss = loss_m + aux_discount * loss_aux
+            #else:
+            outputs = model(inputs)
+            loss = loss_fn(outputs, targets)
             loss.backward()
             optimizer.step()
             training_loss += loss.data.item()
@@ -75,10 +75,10 @@ def train(model,
                 inputs = inputs.to(device)
                 targets = targets.to(device)
                 # Dont care for aux classifier during validation
-                if aux_cls:
-                    outputs, _ = model(inputs)
-                else:
-                    outputs = model(inputs)
+                #if aux_cls:
+                #    outputs, _ = model(inputs)
+                #else:
+                outputs = model(inputs)
                 loss = loss_fn(outputs, targets)
                 val_loss += loss.data.item()
                 predicted = torch.argmax(outputs, dim=1)
@@ -126,7 +126,7 @@ def learn(allparams,
                                                                      batch_size)
 
     if model_base == 'ff_tower':
-        network = torch.compile(FeedForwardTower(num_classes=num_classes, **config))
+        network = FeedForwardTower(num_classes=num_classes, **config)
     elif model_base == 'resnet18':
         network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
     else:

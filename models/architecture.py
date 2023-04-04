@@ -116,30 +116,26 @@ class FeedForwardTower(torch.nn.Module):
         self.flatten = nn.Flatten()
         self.pooling = nn.MaxPool2d(kernel_size=2)
 
-        if self.auxiliary_classifier:
-            self.layer_two_thirds = int(len(filter_counts) * (2/3)) -1
-            self.aux_cls = AxuiliaryClassifier(filter_counts[self.layer_two_thirds],num_classes,self.activation,'batchnorm')
+        #if self.auxiliary_classifier:
+        #    self.layer_two_thirds = int(len(filter_counts) * (2/3)) -1
+        #    self.aux_cls = AxuiliaryClassifier(filter_counts[self.layer_two_thirds],num_classes,self.activation,'batchnorm')
 
 
 
     def forward(self, x):
 
-        aux_input = None
         for idx, block in enumerate(self.conv_blocks):
             x = block(x)
-
-            if self.auxiliary_classifier and self.layer_two_thirds == idx:
-                aux_input = x
-
             x = self.pooling(x)
-
+            #if self.auxiliary_classifier and self.layer_two_thirds == idx:
+            #    aux_input = x
         x = self.last_conv(x)
         x = self.flatten(x)
 
         x = F.softmax(x, dim=1)
 
-        if self.auxiliary_classifier:
-            aux_output = self.aux_cls(aux_input)
-            return x, aux_output
+        #if self.auxiliary_classifier:
+        #    aux_output = self.aux_cls(aux_input)
+        #    return x, aux_output
 
         return x
