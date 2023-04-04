@@ -79,7 +79,8 @@ class FeedForwardTower(torch.nn.Module):
         self.num_classes = num_classes
         self.cell_kernel = cell_kernel
         self.auxiliary_classifier = auxiliary_classifier
-
+        self.time_steps = time_steps
+        
         if self.cell_type == 'conv':
             def get_cell(*args, **kwargs):
                 return ConvWrapper(*args, **kwargs)
