@@ -43,7 +43,7 @@ WIDER_FILTERS = [128, 512, 512, 512, 1024]
 DEEPER_FILTERS = [64, 64, 64, 128, 128, 256, 256, 512, 512, 512]
 
 
-class AxuilaryClassifier(torch.nn.Module):
+class AxuiliaryClassifier(torch.nn.Module):
 
     def __init__(self, in_channels, out_classes, activation, normalization):
         super().__init__()
@@ -62,7 +62,7 @@ class FeedForwardTower(torch.nn.Module):
                  activation='relu',
                  num_classes=1000,
                  cell_kernel=3,
-                 auxiliary_classifier=True):
+                 auxiliary_classifier=False):
         super().__init__()
         self.cell_type = cell_type
         self.num_classes = num_classes
@@ -118,7 +118,7 @@ class FeedForwardTower(torch.nn.Module):
 
         if self.auxiliary_classifier:
             self.layer_two_thirds = int(len(filter_counts) * (2/3)) -1
-            self.aux_cls = AxuilaryClassifier(filter_counts[self.layer_two_thirds],num_classes,self.activation,'batchnorm')
+            self.aux_cls = AxuiliaryClassifier(filter_counts[self.layer_two_thirds],num_classes,self.activation,'batchnorm')
 
 
 

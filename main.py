@@ -23,7 +23,7 @@ def train(model,
           train_loader,
           val_loader,
           epochs: Union[int, str],
-          aux_cls: bool = True,
+          aux_cls: bool = False,
           device='cpu'):
     if val_loader:
         print('Detected Validation Dataset')
@@ -64,6 +64,7 @@ def train(model,
             train_correct += torch.sum(predicted == targets).item()
             train_samples += predicted.shape[0]
         training_loss /= len(train_loader)
+        auxiliary_loss /= len(train_loader)
         train_accuracy = (train_correct / train_samples)
 
         if val_loader:
