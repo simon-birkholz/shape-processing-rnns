@@ -45,7 +45,7 @@ class ConvWrapper(nn.Module):
         self.activation = F.relu
 
     def forward(self, x, hx=None):
-       return self.activation(self.conv), None
+       return self.activation(self.conv)
 
 
 NORMAL_FILTERS = [64, 128, 256, 256, 512]
@@ -80,8 +80,9 @@ class FeedForwardTower(torch.nn.Module):
         self.cell_kernel = cell_kernel
         self.auxiliary_classifier = auxiliary_classifier
         self.time_steps = time_steps
-        
+
         if self.cell_type == 'conv':
+            self.time_steps = 1 # no unrollment necessary
             def get_cell(*args, **kwargs):
                 return ConvWrapper(*args, **kwargs)
         elif self.cell_type == 'gru':
@@ -142,7 +143,12 @@ class FeedForwardTower(torch.nn.Module):
         for t in range(0, self.time_steps):
             for i in range(len(self.cell_blocks)):
                 x = self.conv_blocks[i](x)
-                x, hidden[i] = self.cell_blocks[i](x,hidden[i])
+                if self.cell_type in ['conv', 'rnn', 'gru']:
+                    x = self.cell_blocks[i](x,hidden[i])
+                    hidden[i] = x
+                elif self.cell_type in ['lstm', 'reciprocal']:
+                    x, hy = self.cell_blocks[i](x, hidden[i])
+                    hidden[i] = x,hy
                 x = self.pooling(x)
 
         x = self.last_conv(x)

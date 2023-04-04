@@ -113,6 +113,7 @@ def learn(allparams,
           model_base: str,
           optimizer: str,
           **config):
+    allparams['normalized_lr'] = learning_rate * batch_size # learning rate is dependent on the batch size
     run = wandb.init(
         project='shape-processing-rnns',
         entity='cenrypol',
