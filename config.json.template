@@ -7,5 +7,6 @@
 	"model_base" : "ff_tower",
 	"optimizer" : "adam",
 	"cell_type" : "conv",
-	"activation" : "elu"
+	"activation" : "elu",
+	"time_steps" : 10
 }

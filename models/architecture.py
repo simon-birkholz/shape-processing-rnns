@@ -37,6 +37,16 @@ class ConvBlock(nn.Module):
         out = self.activation(out)
         return out
 
+class ConvWrapper(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel):
+        super(ConvWrapper, self).__init__()
+
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel,  padding='same')
+        self.activation = F.relu
+
+    def forward(self, x, hx=None):
+       return self.activation(self.conv), None
+
 
 NORMAL_FILTERS = [64, 128, 256, 256, 512]
 WIDER_FILTERS = [128, 512, 512, 512, 1024]
@@ -62,6 +72,7 @@ class FeedForwardTower(torch.nn.Module):
                  activation='relu',
                  num_classes=1000,
                  cell_kernel=3,
+                 time_steps=1,
                  auxiliary_classifier=False):
         super().__init__()
         self.cell_type = cell_type
@@ -71,7 +82,7 @@ class FeedForwardTower(torch.nn.Module):
 
         if self.cell_type == 'conv':
             def get_cell(*args, **kwargs):
-                return torch.nn.Conv2d(*args, **kwargs, padding='same')
+                return ConvWrapper(*args, **kwargs)
         elif self.cell_type == 'gru':
             def get_cell(*args, **kwargs):
                 return ConvGruCell(*args, **kwargs)
@@ -116,6 +127,8 @@ class FeedForwardTower(torch.nn.Module):
         self.flatten = nn.Flatten()
         self.pooling = nn.MaxPool2d(kernel_size=2)
 
+        self.cell_blocks = nn.ModuleList([get_cell(f,f,cell_kernel) for f in filter_counts[1:]])
+
         #if self.auxiliary_classifier:
         #    self.layer_two_thirds = int(len(filter_counts) * (2/3)) -1
         #    self.aux_cls = AxuiliaryClassifier(filter_counts[self.layer_two_thirds],num_classes,self.activation,'batchnorm')
@@ -124,11 +137,13 @@ class FeedForwardTower(torch.nn.Module):
 
     def forward(self, x):
 
-        for idx, block in enumerate(self.conv_blocks):
-            x = block(x)
-            x = self.pooling(x)
-            #if self.auxiliary_classifier and self.layer_two_thirds == idx:
-            #    aux_input = x
+        hidden = [None] * len(self.cell_blocks)
+        for t in range(0, self.time_steps):
+            for i in range(len(self.cell_blocks)):
+                x = self.conv_blocks[i](x)
+                x, hidden[i] = self.cell_blocks[i](x,hidden[i])
+                x = self.pooling(x)
+
         x = self.last_conv(x)
         x = self.flatten(x)
 
