@@ -1,5 +1,7 @@
 import math
+import wandb
 
+from typing import Dict
 
 class EarlyStopping:
     def __init__(self, tolerance=5):
@@ -18,3 +20,23 @@ class EarlyStopping:
             if self.counter > self.tolerance:
                 return True
         return False
+
+class WBContext:
+
+    def __init__(self, params: Dict, config: Dict):
+        config.pop('wb_suppress', None)
+        self.params = params
+        self.suppress = params.get('wb_suppress') is not None
+        self.group = config.pop('wb_group', None)
+
+    def __enter__(self):
+        if not self.suppress:
+            self.run = wandb.init(
+                project='shape-processing-rnns',
+                entity='cenrypol',
+                group=self.group,
+                config=dict(params=self.params)
+            )
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if not self.suppress:
+            self.run.finish()

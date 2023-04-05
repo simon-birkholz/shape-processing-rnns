@@ -12,7 +12,7 @@ from tqdm import tqdm
 import wandb
 from datasets.selection import select_dataset
 from models.architecture import FeedForwardTower
-from utils import EarlyStopping
+from utils import EarlyStopping, WBContext
 
 
 def train(model,
@@ -112,57 +112,51 @@ def learn(allparams,
           learning_rate: float,
           model_base: str,
           optimizer: str,
-          batch_frag: 1,
+          *,
+          batch_frag: int =1,
           **config):
     allparams['normalized_lr'] = learning_rate * batch_size  # learning rate is dependent on the batch size
-    intern_batch_size = batch_size / batch_frag
+    intern_batch_size = batch_size // batch_frag
     intern_learning_rate = learning_rate / batch_frag
     allparams['internal_batch_size'] = intern_batch_size
     allparams['internal_lr'] = intern_learning_rate
-    run = wandb.init(
-        project='shape-processing-rnns',
-        entity='cenrypol',
-        config=dict(params=allparams)
-    )
-    # TODO wandb as context manager
-    # TODO dataset selection as context manager (datasets,validation sets and number of classes)
-    # TODO checkpoints and saving as context manager
 
-    train_data_loader, val_data_loader, num_classes = select_dataset(dataset, dataset_path, dataset_val_path,
-                                                                     intern_batch_size)
+    with WBContext(allparams, config):
+        # TODO dataset selection as context manager (datasets,validation sets and number of classes)
+        # TODO checkpoints and saving as context manager
 
-    if model_base == 'ff_tower':
-        network = FeedForwardTower(num_classes=num_classes, **config)
-    elif model_base == 'resnet18':
-        network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
-    else:
-        raise ValueError(f'Unknown base architecture {model_base}')
+        train_data_loader, val_data_loader, num_classes = select_dataset(dataset, dataset_path, dataset_val_path,
+                                                                         intern_batch_size)
 
-    if optimizer == 'adam':
-        opti = optim.AdamW(network.parameters(), lr=intern_learning_rate)
-    elif optimizer == 'sgd':
-        opti = optim.SGD(network.parameters(), lr=intern_learning_rate)
-    else:
-        raise ValueError(f'Unknown optimizer {optimizer}')
+        if model_base == 'ff_tower':
+            network = FeedForwardTower(num_classes=num_classes, **config)
+        elif model_base == 'resnet18':
+            network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
+        else:
+            raise ValueError(f'Unknown base architecture {model_base}')
 
-    parameter_counter = sum(p.numel() for p in network.parameters())
+        if optimizer == 'adam':
+            opti = optim.AdamW(network.parameters(), lr=intern_learning_rate)
+        elif optimizer == 'sgd':
+            opti = optim.SGD(network.parameters(), lr=intern_learning_rate)
+        else:
+            raise ValueError(f'Unknown optimizer {optimizer}')
 
-    print(f'Used network has {parameter_counter} trainable parameters')
+        parameter_counter = sum(p.numel() for p in network.parameters())
 
-    loss = nn.CrossEntropyLoss()
+        print(f'Used network has {parameter_counter} trainable parameters')
 
-    train(network, opti, loss, train_data_loader, val_data_loader, epochs=epochs, device='cuda')
+        loss = nn.CrossEntropyLoss()
 
-    outpath = f'{save_dir}'
-    outparent = Path(save_dir).parent.absolute()
+        train(network, opti, loss, train_data_loader, val_data_loader, epochs=epochs, device='cuda')
 
-    print(f'Saving model at {outpath}')
-    if not os.path.exists(outparent):
-        os.makedirs(outparent, exist_ok=True)
-    torch.save(network.state_dict(), outpath)
+        outpath = f'{save_dir}'
+        outparent = Path(save_dir).parent.absolute()
 
-    run.finish()
-
+        print(f'Saving model at {outpath}')
+        if not os.path.exists(outparent):
+            os.makedirs(outparent, exist_ok=True)
+        torch.save(network.state_dict(), outpath)
 
 if __name__ == '__main__':
     print(f'CUDA: {torch.cuda.is_available()}')
