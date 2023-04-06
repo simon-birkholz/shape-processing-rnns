@@ -55,7 +55,7 @@ def train(model,
             loss.backward()
 
             # weights update
-            if ((batch_idx + 1) % batch_frag == 0) or (batch_idx + 1 == len(data_loader)):
+            if ((batch_idx + 1) % batch_frag == 0) or (batch_idx + 1 == len(train_loader)):
                 optimizer.step()
                 optimizer.zero_grad()
 
