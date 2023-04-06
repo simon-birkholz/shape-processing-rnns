@@ -146,7 +146,7 @@ def learn(allparams,
 
         loss = nn.CrossEntropyLoss()
 
-        train(network, opti, loss, train_data_loader, val_data_loader, epochs=epochs, batch_frag=batch_frag device='cuda')
+        train(network, opti, loss, train_data_loader, val_data_loader, epochs=epochs, batch_frag=batch_frag, device='cuda')
 
         outpath = f'{save_dir}'
         outparent = Path(save_dir).parent.absolute()
