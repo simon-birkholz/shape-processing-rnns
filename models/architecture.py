@@ -137,10 +137,11 @@ class FeedForwardTower(torch.nn.Module):
 
 
 
-    def forward(self, x):
-
+    def forward(self, input):
+        x = input
         hidden = [None] * len(self.cell_blocks)
         for t in range(0, self.time_steps):
+            x = input
             for i in range(len(self.cell_blocks)):
                 x = self.conv_blocks[i](x)
                 if self.cell_type in ['conv', 'rnn', 'gru']:
