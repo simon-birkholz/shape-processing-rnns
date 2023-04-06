@@ -23,11 +23,11 @@ def train(model,
           *,
           epochs: Union[int, str],
           aux_cls: bool = False,
+          batch_frag: int = 1,
           device='cpu'):
     if val_loader:
         print('Detected Validation Dataset')
 
-    aux_discount = 0.4
     do_early_stopping = False
     if epochs == 'early-stop':
         epochs = 100
@@ -42,22 +42,23 @@ def train(model,
         model.train()
         train_correct = 0
         train_samples = 0
-        for batch in tqdm(train_loader):
-            optimizer.zero_grad()
+        for batch_idx, batch in tqdm(enumerate(train_loader)):
+            
             inputs, targets = batch
             inputs = inputs.to(device)
             targets = targets.to(device)
-            # if aux_cls:
-            #    outputs, aux_out = model(inputs)
-            #    loss_m = loss_fn(outputs, targets)
-            #    loss_aux = loss_fn(aux_out, targets)
-            #    auxiliary_loss += loss_aux.data.item()
-            #    loss = loss_m + aux_discount * loss_aux
-            # else:
+            
             outputs = model(inputs)
-            loss = loss_fn(outputs, targets)
+            loss = loss_fn(outputs, targets) / batch_frag
+            # normalize loss to account for batch accumulation
+            # backward pass
             loss.backward()
-            optimizer.step()
+
+            # weights update
+            if ((batch_idx + 1) % batch_frag == 0) or (batch_idx + 1 == len(data_loader)):
+                optimizer.step()
+                optimizer.zero_grad()
+
             training_loss += loss.data.item()
             predicted = torch.argmax(outputs, dim=1)
             train_correct += torch.sum(predicted == targets).item()
@@ -74,10 +75,7 @@ def train(model,
                 inputs, targets = batch
                 inputs = inputs.to(device)
                 targets = targets.to(device)
-                # Dont care for aux classifier during validation
-                # if aux_cls:
-                #    outputs, _ = model(inputs)
-                # else:
+                
                 outputs = model(inputs)
                 loss = loss_fn(outputs, targets)
                 val_loss += loss.data.item()
@@ -117,7 +115,7 @@ def learn(allparams,
           **config):
     allparams['normalized_lr'] = learning_rate * batch_size  # learning rate is dependent on the batch size
     intern_batch_size = batch_size // batch_frag
-    intern_learning_rate = learning_rate / batch_frag
+    intern_learning_rate = learning_rate
     allparams['internal_batch_size'] = intern_batch_size
     allparams['internal_lr'] = intern_learning_rate
 
@@ -148,7 +146,7 @@ def learn(allparams,
 
         loss = nn.CrossEntropyLoss()
 
-        train(network, opti, loss, train_data_loader, val_data_loader, epochs=epochs, device='cuda')
+        train(network, opti, loss, train_data_loader, val_data_loader, epochs=epochs, batch_frag=batch_frag device='cuda')
 
         outpath = f'{save_dir}'
         outparent = Path(save_dir).parent.absolute()
