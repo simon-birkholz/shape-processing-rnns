@@ -49,8 +49,7 @@ def train(model,
             targets = targets.to(device)
             
             outputs = model(inputs)
-            loss = loss_fn(outputs, targets) / batch_frag
-            # normalize loss to account for batch accumulation
+            loss = loss_fn(outputs, targets)
             # backward pass
             loss.backward()
 
@@ -101,6 +100,7 @@ def train(model,
 
 
 def learn(allparams,
+          *,
           dataset: str,
           dataset_path: str,
           dataset_val_path: str,
@@ -108,9 +108,9 @@ def learn(allparams,
           batch_size: int,
           epochs: Union[int, str],
           learning_rate: float,
+          momentum: float,
           model_base: str,
           optimizer: str,
-          *,
           batch_frag: int =1,
           **config):
     allparams['normalized_lr'] = learning_rate * batch_size  # learning rate is dependent on the batch size
@@ -136,7 +136,7 @@ def learn(allparams,
         if optimizer == 'adam':
             opti = optim.AdamW(network.parameters(), lr=intern_learning_rate)
         elif optimizer == 'sgd':
-            opti = optim.SGD(network.parameters(), lr=intern_learning_rate)
+            opti = optim.SGD(network.parameters(), lr=intern_learning_rate, momentum=momentum, nestrov=True)
         else:
             raise ValueError(f'Unknown optimizer {optimizer}')
 
