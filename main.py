@@ -136,7 +136,7 @@ def learn(allparams,
         if optimizer == 'adam':
             opti = optim.AdamW(network.parameters(), lr=intern_learning_rate)
         elif optimizer == 'sgd':
-            opti = optim.SGD(network.parameters(), lr=intern_learning_rate, momentum=momentum, nestrov=True)
+            opti = optim.SGD(network.parameters(), lr=intern_learning_rate, momentum=momentum, nesterov=True)
         else:
             raise ValueError(f'Unknown optimizer {optimizer}')
 
