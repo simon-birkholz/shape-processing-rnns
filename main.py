@@ -99,9 +99,7 @@ def train(model,
             print(f'Epoch {epoch + 1}, Training Loss: {training_loss:.2f}, Training Acc: {train_accuracy:.2f}')
 
 
-def learn(allparams,
-          *,
-          dataset: str,
+def learn(dataset: str,
           dataset_path: str,
           dataset_val_path: str,
           save_dir: str,
@@ -113,48 +111,48 @@ def learn(allparams,
           optimizer: str,
           batch_frag: int =1,
           **config):
-    allparams['normalized_lr'] = learning_rate * batch_size  # learning rate is dependent on the batch size
+    #allparams['normalized_lr'] = learning_rate * batch_size  # learning rate is dependent on the batch size
     intern_batch_size = batch_size // batch_frag
     intern_learning_rate = learning_rate
-    allparams['internal_batch_size'] = intern_batch_size
-    allparams['internal_lr'] = intern_learning_rate
+    #allparams['internal_batch_size'] = intern_batch_size
+    #allparams['internal_lr'] = intern_learning_rate
 
-    with WBContext(allparams, config):
-        # TODO dataset selection as context manager (datasets,validation sets and number of classes)
-        # TODO checkpoints and saving as context manager
+    
+    # TODO dataset selection as context manager (datasets,validation sets and number of classes)
+    # TODO checkpoints and saving as context manager
 
-        train_data_loader, val_data_loader, num_classes = select_dataset(dataset, dataset_path, dataset_val_path,
-                                                                         intern_batch_size)
+    train_data_loader, val_data_loader, num_classes = select_dataset(dataset, dataset_path, dataset_val_path,
+                                                                        intern_batch_size)
 
-        if model_base == 'ff_tower':
-            network = FeedForwardTower(num_classes=num_classes, **config)
-        elif model_base == 'resnet18':
-            network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
-        else:
-            raise ValueError(f'Unknown base architecture {model_base}')
+    if model_base == 'ff_tower':
+        network = FeedForwardTower(num_classes=num_classes, **config)
+    elif model_base == 'resnet18':
+        network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
+    else:
+        raise ValueError(f'Unknown base architecture {model_base}')
 
-        if optimizer == 'adam':
-            opti = optim.AdamW(network.parameters(), lr=intern_learning_rate)
-        elif optimizer == 'sgd':
-            opti = optim.SGD(network.parameters(), lr=intern_learning_rate, momentum=momentum, nesterov=True)
-        else:
-            raise ValueError(f'Unknown optimizer {optimizer}')
+    if optimizer == 'adam':
+        opti = optim.AdamW(network.parameters(), lr=intern_learning_rate)
+    elif optimizer == 'sgd':
+        opti = optim.SGD(network.parameters(), lr=intern_learning_rate, momentum=momentum, nesterov=True)
+    else:
+        raise ValueError(f'Unknown optimizer {optimizer}')
 
-        parameter_counter = sum(p.numel() for p in network.parameters())
+    parameter_counter = sum(p.numel() for p in network.parameters())
 
-        print(f'Used network has {parameter_counter} trainable parameters')
+    print(f'Used network has {parameter_counter} trainable parameters')
 
-        loss = nn.CrossEntropyLoss()
+    loss = nn.CrossEntropyLoss()
 
-        train(network, opti, loss, train_data_loader, val_data_loader, epochs=epochs, batch_frag=batch_frag, device='cuda')
+    train(network, opti, loss, train_data_loader, val_data_loader, epochs=epochs, batch_frag=batch_frag, device='cuda')
 
-        outpath = f'{save_dir}'
-        outparent = Path(save_dir).parent.absolute()
+    outpath = f'{save_dir}'
+    outparent = Path(save_dir).parent.absolute()
 
-        print(f'Saving model at {outpath}')
-        if not os.path.exists(outparent):
-            os.makedirs(outparent, exist_ok=True)
-        torch.save(network.state_dict(), outpath)
+    print(f'Saving model at {outpath}')
+    if not os.path.exists(outparent):
+        os.makedirs(outparent, exist_ok=True)
+    torch.save(network.state_dict(), outpath)
 
 if __name__ == '__main__':
     print(f'CUDA: {torch.cuda.is_available()}')
@@ -176,5 +174,6 @@ if __name__ == '__main__':
             config['dataset_val_path'] = None
 
         config['save_dir'] = args.out
-        allparams = config.copy()
-        learn(allparams, **config)
+        
+        with WBContext(config) as wb:
+        	learn(**wb.get_config())

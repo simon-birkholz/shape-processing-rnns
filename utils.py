@@ -23,11 +23,13 @@ class EarlyStopping:
 
 class WBContext:
 
-    def __init__(self, params: Dict, config: Dict):
+    def __init__(self, config: Dict):
+        
+        self.suppress = config.get('wb_suppress') is not None
         config.pop('wb_suppress', None)
-        self.params = params
-        self.suppress = params.get('wb_suppress') is not None
+        self.params = config.copy()
         self.group = config.pop('wb_group', None)
+        self.config = config
 
     def __enter__(self):
         if not self.suppress:
@@ -37,6 +39,10 @@ class WBContext:
                 group=self.group,
                 config=dict(params=self.params)
             )
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         if not self.suppress:
             self.run.finish()
+
+    def get_config() -> Dict:
+        return self.config
