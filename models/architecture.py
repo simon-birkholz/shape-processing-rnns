@@ -29,6 +29,8 @@ class ConvBlock(nn.Module):
             self.conv = nn.Conv2d(in_channels, out_channels, kernel, stride, padding='same')
         if normalization == 'batchnorm':
             self.norm = nn.BatchNorm2d(out_channels)
+        elif normalization == 'layernorm':
+        		self.norm == nn.GroupNorm(1,out_channels)
         self.activation = activation
 
     def forward(self, x):
@@ -73,6 +75,7 @@ class FeedForwardTower(torch.nn.Module):
                  num_classes=1000,
                  cell_kernel=3,
                  time_steps=1,
+                 normalization='batchnorm',
                  auxiliary_classifier=False):
         super().__init__()
         self.cell_type = cell_type
@@ -121,7 +124,7 @@ class FeedForwardTower(torch.nn.Module):
         print(kernel_sizes)
 
         self.conv_blocks = nn.ModuleList(
-            [ConvBlock(ins, outs, ks, ss, self.activation, 'batchnorm') for (ins, outs), ks, ss in
+            [ConvBlock(ins, outs, ks, ss, self.activation, normalization) for (ins, outs), ks, ss in
              zip(pairwise(filter_counts), kernel_sizes, stride_sizes)])
 
         self.last_conv = nn.Conv2d(filter_counts[-1], self.num_classes, 2, 1, padding='same')
