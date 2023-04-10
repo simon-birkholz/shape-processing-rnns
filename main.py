@@ -176,4 +176,4 @@ if __name__ == '__main__':
         config['save_dir'] = args.out
         
         with WBContext(config) as wb:
-        	learn(**wb.get_config())
+        	learn(**wb)
