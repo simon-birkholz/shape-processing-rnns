@@ -28,5 +28,26 @@ echo "cat $CONF_IN | envsubst > $CONF_READY" >> $JOB
 
 echo "python main.py $CONF_READY --out $WEIGHTS" >> $JOB
 
-sbatch -p gpu_4_a100 -t 48:00:00 $JOB
+nojobs=${1:-5}
+dep_type="${2:-afterany}"
 
+loop_cnt=1
+
+# taken from https://wiki.bwhpc.de/e/BwUniCluster2.0/Slurm#Chain_jobs
+while [ ${loop_cnt} -le ${nojobs} ] ; do
+
+	if [ ${loop_cnt} -eq 1 ] ; then
+		slurm_opt=""
+	else
+		slurm_opt="-d ${dep_type}:${jobID}"
+	fi
+
+	jobID=$(sbatch -p gpu_4_a100 ${slurm_opt} -t 48:00:00 $JOB 2>&1 | sed 's/[S,a-z]* //g')
+	
+	if [[ "${jobID}" =~ "*sbatch::error*" ]] ; then
+      		echo "   -> submission failed!" ; exit 1
+   	else
+      		echo "   -> job number = ${jobID}"
+   	fi
+	let loop_cnt+=1
+done
