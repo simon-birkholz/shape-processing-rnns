@@ -52,7 +52,7 @@ class WBContext:
                     updated_values.pop('params',None)
                     train_fun(**updated_values)
                 def agent_wrapper(train_fun):
-                    wandb.agent(sweep_id=complete_sweep_id, function=functools.partial(train_fun_wrapper,train_fun))
+                    wandb.agent(sweep_id=complete_sweep_id, function=functools.partial(train_fun_wrapper,train_fun), count=1)
                 return agent_wrapper
             else:
                 self.run = wandb.init(
