@@ -9,8 +9,9 @@
     "learning_rate": {
       "max": 0.1,
       "min": 0.000001,
-      "distribution": "uniform"
-    }
+      "distribution" : "log_uniform_values"
+    },
+    "batch_size" : { "values" : [1024, 512, 256, 128, 64, 32, 16] }
   },
   "early_terminate" : { "type" : "hyperband", "min_iter" : 10 }
 }

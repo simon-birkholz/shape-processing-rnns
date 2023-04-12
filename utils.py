@@ -45,6 +45,7 @@ class WBContext:
                 complete_sweep_id = f'{self.entity}/{self.project}/{self.sweep}'
                 def train_fun_wrapper(train_fun):
                     self.run = wandb.init(
+                        group=self.group,
                         config=dict(params=self.params)
                     )
                     updated_values = dict(self.config,**self.run.config)

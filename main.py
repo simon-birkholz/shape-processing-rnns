@@ -109,15 +109,19 @@ def learn(dataset: str,
           momentum: float,
           model_base: str,
           optimizer: str,
-          batch_frag: int =1,
+          batch_frag: int =-1,
+          batch_max: int=-1,
           **config):
-    #allparams['normalized_lr'] = learning_rate * batch_size  # learning rate is dependent on the batch size
+    # calculated hardware requirement
+    if batch_max > 0 and batch_max < batch_size:
+        batch_frag = batch_size // batch_max
+
+    if batch_frag == -1:
+        batch_frag = 1
+
     intern_batch_size = batch_size // batch_frag
     intern_learning_rate = learning_rate
-    #allparams['internal_batch_size'] = intern_batch_size
-    #allparams['internal_lr'] = intern_learning_rate
 
-    
     # TODO dataset selection as context manager (datasets,validation sets and number of classes)
     # TODO checkpoints and saving as context manager
 
@@ -173,8 +177,16 @@ if __name__ == '__main__':
         if 'dataset_val_path' not in config.keys():
             config['dataset_val_path'] = None
 
-        if 'batch_frag' not in config.keys():
+        # Evaluate Hardware Limitations and compensate eventually with accumulated Gradients
+        if 'batch_frag' in config.keys() and 'batch_max' in config.keys():
+            raise ValueError('batch_frag and batch_max at the same time are not supported')
+        elif 'batch_frag' not in config.keys() and 'batch_max' in config.keys():
+            config['batch_frag'] = -1
+        elif 'batch_frag'  in config.keys() and 'batch_max' not in config.keys():
+            config['batch_max'] = -1
+        if 'batch_frag' not in config.keys() and 'batch_max' not in config.keys():
             config['batch_frag'] = 1
+            config['batch_max'] = -1
 
         config['save_dir'] = args.out
         
