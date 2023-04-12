@@ -76,8 +76,11 @@ class FeedForwardTower(torch.nn.Module):
                  cell_kernel=3,
                  time_steps=1,
                  normalization='batchnorm',
-                 auxiliary_classifier=False):
+                 auxiliary_classifier=False,
+                 **kwargs):
         super().__init__()
+        for k, v in kwargs.items():
+            print(f"Unknown Parameter {k}:{v}")
         self.cell_type = cell_type
         self.num_classes = num_classes
         self.cell_kernel = cell_kernel

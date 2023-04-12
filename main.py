@@ -173,7 +173,13 @@ if __name__ == '__main__':
         if 'dataset_val_path' not in config.keys():
             config['dataset_val_path'] = None
 
+        if 'batch_frag' not in config.keys():
+            config['batch_frag'] = 1
+
         config['save_dir'] = args.out
         
         with WBContext(config) as wb:
-        	learn(**wb)
+            if callable(wb):
+                wb(learn)
+            else:
+        	    learn(**wb)

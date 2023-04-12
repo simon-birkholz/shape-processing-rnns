@@ -1,0 +1,16 @@
+{
+  "method": "bayes",
+  "name": "test-sweep",
+  "metric": {
+    "goal": "maximize",
+    "name": "val_acc"
+  },
+  "parameters": {
+    "learning_rate": {
+      "max": 0.1,
+      "min": 0.000001,
+      "distribution": "uniform"
+    }
+  },
+  "early_terminate" : { "type" : "hyperband", "min_iter" : 10 }
+}
