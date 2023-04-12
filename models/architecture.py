@@ -30,7 +30,7 @@ class ConvBlock(nn.Module):
         if normalization == 'batchnorm':
             self.norm = nn.BatchNorm2d(out_channels)
         elif normalization == 'layernorm':
-        	self.norm == nn.GroupNorm(1,out_channels)
+        	self.norm = nn.GroupNorm(1,out_channels)
         self.activation = activation
 
     def forward(self, x):
