@@ -30,7 +30,7 @@ def train(model,
 
     do_early_stopping = False
     if epochs == 'early-stop':
-        epochs = 100
+        epochs = 400
         do_early_stopping = True
         early_stopping = EarlyStopping(tolerance=5)
 
@@ -184,7 +184,7 @@ if __name__ == '__main__':
             config['batch_frag'] = -1
         elif 'batch_frag'  in config.keys() and 'batch_max' not in config.keys():
             config['batch_max'] = -1
-        if 'batch_frag' not in config.keys() and 'batch_max' not in config.keys():
+        elif 'batch_frag' not in config.keys() and 'batch_max' not in config.keys():
             config['batch_frag'] = 1
             config['batch_max'] = -1
 
