@@ -62,6 +62,9 @@ class WBContext:
                     config=dict(params=self.params)
                 )
                 return self.config
+        else:
+            # jupst pass on config object
+            return self.config
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if not self.suppress:

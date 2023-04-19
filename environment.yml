@@ -17,6 +17,8 @@ dependencies:
   - libjpeg-turbo=2.1.4
   - opencv=4.7.0
   - numba=0.56.4
+  - pandas=1.5.3
+  - ipykernel=6.19.2
   - pip:
       - tqdm==4.65.0
       - cupy-cuda11x==11.6.0

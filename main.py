@@ -139,6 +139,8 @@ def learn(dataset: str,
         opti = optim.AdamW(network.parameters(), lr=intern_learning_rate)
     elif optimizer == 'sgd':
         opti = optim.SGD(network.parameters(), lr=intern_learning_rate, momentum=momentum, nesterov=True)
+    elif optimizer == 'rms':
+        opti = optim.RMSprop(network.parameters(), lr=intern_learning_rate, momentum=momentum)
     else:
         raise ValueError(f'Unknown optimizer {optimizer}')
 

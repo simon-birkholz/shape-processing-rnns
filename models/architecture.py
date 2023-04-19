@@ -73,7 +73,7 @@ class FeedForwardTower(torch.nn.Module):
                  cell_type='conv',
                  activation='relu',
                  num_classes=1000,
-                 cell_kernel=3,
+                 cell_kernel=7,
                  time_steps=1,
                  normalization='batchnorm',
                  auxiliary_classifier=False,
