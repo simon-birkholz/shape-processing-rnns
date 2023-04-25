@@ -11,7 +11,8 @@
       "min": 0.000001,
       "distribution" : "log_uniform_values"
     },
-    "batch_size" : { "values" : [1024, 512, 256, 128, 64, 32, 16] }
+    "batch_size" : { "values" : [1024, 512, 256, 128, 64, 32, 16] },
+    "cell_kernel" : { "values" :  [3,4,5,6,7] }
   },
   "early_terminate" : { "type" : "hyperband", "min_iter" : 10 }
 }

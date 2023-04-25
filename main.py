@@ -24,15 +24,24 @@ def train(model,
           epochs: Union[int, str],
           aux_cls: bool = False,
           batch_frag: int = 1,
+          scheduler = None,
           device='cpu'):
     if val_loader:
         print('Detected Validation Dataset')
+
+    do_wb = wandb.run is not None
+    if not do_wb:
+        print('Could not find wandb.run object')
 
     do_early_stopping = False
     if epochs == 'early-stop':
         epochs = 400
         do_early_stopping = True
         early_stopping = EarlyStopping(tolerance=5)
+
+    if scheduler is not None:
+        if scheduler == 'step':
+            scheduler = optim.lr_scheduler.StepLR(optimizer,step_size=30,gamma=0.1)
 
     model.to(device)
     for epoch in range(epochs):
@@ -42,7 +51,7 @@ def train(model,
         model.train()
         train_correct = 0
         train_samples = 0
-        for batch_idx, batch in tqdm(enumerate(train_loader)):
+        for batch_idx, batch in tqdm(enumerate(train_loader), total=len(train_loader)):
             
             inputs, targets = batch
             inputs = inputs.to(device)
@@ -88,16 +97,23 @@ def train(model,
 
             log_data = {'training_loss': training_loss, 'train_acc': train_accuracy, 'val_loss': val_loss,
                         'val_acc': val_accuracy, 'auxiliary_loss': auxiliary_loss}
-            wandb.log(log_data)
+            if do_wb:
+                wandb.log(log_data)
             print(
                 f'\nEpoch {epoch + 1}, Training Loss: {training_loss:.2f}, Training Acc: {train_accuracy:.2f}, Validation Loss: {val_loss:.2f}, Validation Acc: {val_accuracy:.2f}')
             if do_early_stopping and early_stopping(val_loss):
                 print(f'Early stopping after epoch {epoch + 1}')
                 return
         else:
-            wandb.log({'training_loss': training_loss, 'train_acc': train_accuracy})
+            if do_wb:
+                wandb.log({'training_loss': training_loss, 'train_acc': train_accuracy})
             print(f'Epoch {epoch + 1}, Training Loss: {training_loss:.2f}, Training Acc: {train_accuracy:.2f}')
+            if do_early_stopping and early_stopping(training_loss):
+                print(f'Early stopping (on training loss) after epoch {epoch + 1}')
+                return
 
+        if scheduler is not None:
+            scheduler.step()
 
 def learn(dataset: str,
           dataset_path: str,
@@ -111,6 +127,7 @@ def learn(dataset: str,
           optimizer: str,
           batch_frag: int =-1,
           batch_max: int=-1,
+          lr_scheduler: str = None,
           **config):
     # calculated hardware requirement
     if batch_max > 0 and batch_max < batch_size:
@@ -150,7 +167,7 @@ def learn(dataset: str,
 
     loss = nn.CrossEntropyLoss()
 
-    train(network, opti, loss, train_data_loader, val_data_loader, epochs=epochs, batch_frag=batch_frag, device='cuda')
+    train(network, opti, loss, train_data_loader, val_data_loader, epochs=epochs, batch_frag=batch_frag, device='cuda', scheduler=lr_scheduler)
 
     outpath = f'{save_dir}'
     outparent = Path(save_dir).parent.absolute()

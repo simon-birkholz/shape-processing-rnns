@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+import torch.jit as jit
+
 
 from .utils import _pair
 
@@ -77,6 +79,7 @@ class ConvGruCell(torch.nn.Module):
         # state candidate
         self.can = nn.Conv2d(in_channels=in_channels + out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
 
+
     def forward(self,input ,hx=None):
         # Inputs:
         # input: of shape (batch_size, input_size,height_size, width_size)
@@ -130,6 +133,7 @@ class ConvLSTMCell(torch.nn.Module):
 
         # state candidate
         self.can = nn.Conv2d(in_channels=in_channels + out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
+
 
     def forward(self,input ,hidden_state=None):
         # Inputs:

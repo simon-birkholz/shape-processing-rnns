@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import functools
-
+import torch.jit as jit
 from .utils import _pair
 from models.cells import ConvRNNCell, ConvGruCell, ConvLSTMCell, ReciprocalGatedCell
 
@@ -39,7 +39,7 @@ class ConvBlock(nn.Module):
         out = self.activation(out)
         return out
 
-class ConvWrapper(nn.Module):
+class ConvWrapper(torch.nn.Module):
     def __init__(self, in_channels, out_channels, kernel):
         super(ConvWrapper, self).__init__()
 
@@ -141,7 +141,10 @@ class FeedForwardTower(torch.nn.Module):
         #    self.layer_two_thirds = int(len(filter_counts) * (2/3)) -1
         #    self.aux_cls = AxuiliaryClassifier(filter_counts[self.layer_two_thirds],num_classes,self.activation,'batchnorm')
 
-
+        if self.cell_type in ['conv', 'rnn', 'gru']:
+            self.get_x = lambda out : out
+        elif self.cell_type in ['lstm', 'reciprocal']:
+            self.get_x = lambda out: out[0]
 
     def forward(self, input):
         x = input
@@ -150,12 +153,9 @@ class FeedForwardTower(torch.nn.Module):
             x = input
             for i in range(len(self.cell_blocks)):
                 x = self.conv_blocks[i](x)
-                if self.cell_type in ['conv', 'rnn', 'gru']:
-                    x = self.cell_blocks[i](x,hidden[i])
-                    hidden[i] = x
-                elif self.cell_type in ['lstm', 'reciprocal']:
-                    x, hy = self.cell_blocks[i](x, hidden[i])
-                    hidden[i] = x,hy
+                x = self.cell_blocks[i](x,hidden[i])
+                hidden[i] = x
+                x = self.get_x(x)
                 x = self.pooling(x)
 
         x = self.last_conv(x)
