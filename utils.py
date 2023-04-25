@@ -83,6 +83,7 @@ class ModelFileContext:
     def __enter__(self):
         info_file = Path(f'{self.outpath.stem}.info')
         prefix = self.outpath.stem
+        loaded = 0
         if self.do_reload and info_file.exists():
             with open(info_file,'r') as f:
                 self.checkpoints = json.load(f)
@@ -92,7 +93,8 @@ class ModelFileContext:
             print(f'Loading model from {best_checkpoint_file}')
             state = torch.load(best_checkpoint_file)
             self.network.load_state_dict(state)
-        return self.save_model
+            loaded = best_checkpoint
+        return self.save_model, loaded
 
     def save_model(self, epoch: int):
         prefix = self.outpath.stem

@@ -25,6 +25,7 @@ def train(model,
           batch_frag: int = 1,
           scheduler=None,
           save_cb=None,
+          start_epoch=0,
           device='cpu'):
     if val_loader:
         print('Detected Validation Dataset')
@@ -45,7 +46,7 @@ def train(model,
             scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
 
     model.to(device)
-    for epoch in range(epochs):
+    for epoch in range(start_epoch, epochs, 1):
         auxiliary_loss = 0.0
         training_loss = 0.0
         val_loss = 0.0
@@ -172,9 +173,9 @@ def learn(dataset: str,
 
     loss = nn.CrossEntropyLoss()
 
-    with ModelFileContext(network, save_dir) as save_cb:
+    with ModelFileContext(network, save_dir) as (save_cb, loaded_epoch):
         train(network, opti, loss, train_data_loader, val_data_loader, epochs=epochs, batch_frag=batch_frag,
-              device='cuda', scheduler=lr_scheduler, save_cb=save_cb)
+              device='cuda', scheduler=lr_scheduler, save_cb=save_cb, start_epoch=loaded_epoch)
 
 
 if __name__ == '__main__':
