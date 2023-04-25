@@ -1,7 +1,6 @@
 import argparse
 import json
 import os
-from pathlib import Path
 from typing import Union
 
 import torch
@@ -12,7 +11,7 @@ from tqdm import tqdm
 import wandb
 from datasets.selection import select_dataset
 from models.architecture import FeedForwardTower
-from utils import EarlyStopping, WBContext
+from utils import EarlyStopping, WBContext, ModelFileContext
 
 
 def train(model,
@@ -24,7 +23,8 @@ def train(model,
           epochs: Union[int, str],
           aux_cls: bool = False,
           batch_frag: int = 1,
-          scheduler = None,
+          scheduler=None,
+          save_cb=None,
           device='cpu'):
     if val_loader:
         print('Detected Validation Dataset')
@@ -40,8 +40,9 @@ def train(model,
         early_stopping = EarlyStopping(tolerance=5)
 
     if scheduler is not None:
+        print('Using degrading learning rate')
         if scheduler == 'step':
-            scheduler = optim.lr_scheduler.StepLR(optimizer,step_size=30,gamma=0.1)
+            scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
 
     model.to(device)
     for epoch in range(epochs):
@@ -52,11 +53,11 @@ def train(model,
         train_correct = 0
         train_samples = 0
         for batch_idx, batch in tqdm(enumerate(train_loader), total=len(train_loader)):
-            
+
             inputs, targets = batch
             inputs = inputs.to(device)
             targets = targets.to(device)
-            
+
             outputs = model(inputs)
             loss = loss_fn(outputs, targets)
             # backward pass
@@ -83,7 +84,7 @@ def train(model,
                 inputs, targets = batch
                 inputs = inputs.to(device)
                 targets = targets.to(device)
-                
+
                 outputs = model(inputs)
                 loss = loss_fn(outputs, targets)
                 val_loss += loss.data.item()
@@ -115,6 +116,10 @@ def train(model,
         if scheduler is not None:
             scheduler.step()
 
+        if save_cb is not None and (epochs + 1) % 10:
+            save_cb(epoch + 1)
+
+
 def learn(dataset: str,
           dataset_path: str,
           dataset_val_path: str,
@@ -125,8 +130,8 @@ def learn(dataset: str,
           momentum: float,
           model_base: str,
           optimizer: str,
-          batch_frag: int =-1,
-          batch_max: int=-1,
+          batch_frag: int = -1,
+          batch_max: int = -1,
           lr_scheduler: str = None,
           **config):
     # calculated hardware requirement
@@ -143,7 +148,7 @@ def learn(dataset: str,
     # TODO checkpoints and saving as context manager
 
     train_data_loader, val_data_loader, num_classes = select_dataset(dataset, dataset_path, dataset_val_path,
-                                                                        intern_batch_size)
+                                                                     intern_batch_size)
 
     if model_base == 'ff_tower':
         network = FeedForwardTower(num_classes=num_classes, **config)
@@ -167,15 +172,10 @@ def learn(dataset: str,
 
     loss = nn.CrossEntropyLoss()
 
-    train(network, opti, loss, train_data_loader, val_data_loader, epochs=epochs, batch_frag=batch_frag, device='cuda', scheduler=lr_scheduler)
+    with ModelFileContext(network, save_dir) as save_cb:
+        train(network, opti, loss, train_data_loader, val_data_loader, epochs=epochs, batch_frag=batch_frag,
+              device='cuda', scheduler=lr_scheduler, save_cb=save_cb)
 
-    outpath = f'{save_dir}'
-    outparent = Path(save_dir).parent.absolute()
-
-    print(f'Saving model at {outpath}')
-    if not os.path.exists(outparent):
-        os.makedirs(outparent, exist_ok=True)
-    torch.save(network.state_dict(), outpath)
 
 if __name__ == '__main__':
     print(f'CUDA: {torch.cuda.is_available()}')
@@ -201,16 +201,16 @@ if __name__ == '__main__':
             raise ValueError('batch_frag and batch_max at the same time are not supported')
         elif 'batch_frag' not in config.keys() and 'batch_max' in config.keys():
             config['batch_frag'] = -1
-        elif 'batch_frag'  in config.keys() and 'batch_max' not in config.keys():
+        elif 'batch_frag' in config.keys() and 'batch_max' not in config.keys():
             config['batch_max'] = -1
         elif 'batch_frag' not in config.keys() and 'batch_max' not in config.keys():
             config['batch_frag'] = 1
             config['batch_max'] = -1
 
         config['save_dir'] = args.out
-        
+
         with WBContext(config) as wb:
             if callable(wb):
                 wb(learn)
             else:
-        	    learn(**wb)
+                learn(**wb)

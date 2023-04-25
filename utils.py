@@ -2,7 +2,10 @@ import math
 import wandb
 import functools
 from typing import Dict
-
+from pathlib import Path
+import json
+import torch
+import os
 
 class EarlyStopping:
     def __init__(self, tolerance=5):
@@ -69,3 +72,45 @@ class WBContext:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if not self.suppress:
             self.run.finish()
+
+class ModelFileContext:
+    def __init__(self, network: torch.nn.Module, outpath: str, do_reload=True):
+        self.network = network
+        self.outpath = Path(outpath)
+        self.do_reload = do_reload
+        self.checkpoints = []
+
+    def __enter__(self):
+        info_file = Path(f'{self.outpath.stem}.info')
+        prefix = self.outpath.stem
+        if self.do_reload and info_file.exists():
+            with open(info_file,'r') as f:
+                self.checkpoints = json.load(f)
+
+            best_checkpoint = max(self.checkpoints)
+            best_checkpoint_file = f'{prefix}-ep{best_checkpoint}.weights'
+            print(f'Loading model from {best_checkpoint_file}')
+            state = torch.load(best_checkpoint_file)
+            self.network.load_state_dict(state)
+        return self.save_model
+
+    def save_model(self, epoch: int):
+        prefix = self.outpath.stem
+        checkpoint_file = f'{prefix}-ep{epoch}.weights'
+        print(f'Saving model at {checkpoint_file}')
+        parent = Path(checkpoint_file).parent.absolute()
+
+        if not os.path.exists(parent):
+            os.makedirs(parent, exist_ok=True)
+        torch.save(self.network.state_dict(), checkpoint_file)
+        self.checkpoints.append(epoch)
+        info_file = Path(f'{self.outpath.stem}.info')
+        with open(info_file,'w') as f:
+            json.dump(self.checkpoints,f)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print(f'Saving model at {self.outpath}')
+        parent = Path(self.outpath).parent.absolute()
+        if not os.path.exists(parent):
+            os.makedirs(parent, exist_ok=True)
+        torch.save(self.network.state_dict(), self.outpath)
