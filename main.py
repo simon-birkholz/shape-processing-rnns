@@ -12,6 +12,7 @@ import wandb
 from datasets.selection import select_dataset
 from models.architecture import FeedForwardTower
 from utils import EarlyStopping, WBContext, ModelFileContext
+import inspect
 
 
 def train(model,
@@ -22,11 +23,12 @@ def train(model,
           *,
           epochs: Union[int, str],
           aux_cls: bool = False,
+          do_gradient_clipping: bool = False,
           batch_frag: int = 1,
-          scheduler=None,
+          lr_scheduler: str = None,
           save_cb=None,
-          start_epoch=0,
-          device='cpu'):
+          start_epoch: int = 0,
+          device: str = 'cpu'):
     if val_loader:
         print('Detected Validation Dataset')
 
@@ -34,15 +36,18 @@ def train(model,
     if not do_wb:
         print('Could not find wandb.run object')
 
+    if do_gradient_clipping:
+        clip_value = 3
+
     do_early_stopping = False
     if epochs == 'early-stop':
         epochs = 400
         do_early_stopping = True
         early_stopping = EarlyStopping(tolerance=5)
 
-    if scheduler is not None:
+    if lr_scheduler is not None:
         print('Using degrading learning rate')
-        if scheduler == 'step':
+        if lr_scheduler == 'step':
             scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
 
     model.to(device)
@@ -66,6 +71,8 @@ def train(model,
 
             # weights update
             if ((batch_idx + 1) % batch_frag == 0) or (batch_idx + 1 == len(train_loader)):
+                if do_gradient_clipping:
+                    clip_grad_value_(model.parameters(), clip_value)
                 optimizer.step()
                 optimizer.zero_grad()
 
@@ -114,8 +121,8 @@ def train(model,
                 print(f'Early stopping (on training loss) after epoch {epoch + 1}')
                 return
 
-        if scheduler is not None:
-            scheduler.step()
+        if lr_scheduler is not None:
+            lr_scheduler.step()
 
         if save_cb is not None and (epochs + 1) % 10:
             save_cb(epoch + 1)
@@ -126,14 +133,12 @@ def learn(dataset: str,
           dataset_val_path: str,
           save_dir: str,
           batch_size: int,
-          epochs: Union[int, str],
           learning_rate: float,
           momentum: float,
           model_base: str,
           optimizer: str,
           batch_frag: int = -1,
           batch_max: int = -1,
-          lr_scheduler: str = None,
           **config):
     # calculated hardware requirement
     if batch_max > 0 and batch_max < batch_size:
@@ -146,13 +151,17 @@ def learn(dataset: str,
     intern_learning_rate = learning_rate
 
     # TODO dataset selection as context manager (datasets,validation sets and number of classes)
-    # TODO checkpoints and saving as context manager
 
     train_data_loader, val_data_loader, num_classes = select_dataset(dataset, dataset_path, dataset_val_path,
                                                                      intern_batch_size)
+    model_args = inspect.getfullargspec(FeedForwardTower.__init__).args
+    train_args = inspect.getfullargspec(train).args
+
+    model_config = {k: v for k, v in config if k in model_args}
+    train_config = {k: v for k, v in config if k in train_args}
 
     if model_base == 'ff_tower':
-        network = FeedForwardTower(num_classes=num_classes, **config)
+        network = FeedForwardTower(num_classes=num_classes, **model_config)
     elif model_base == 'resnet18':
         network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
     else:
@@ -174,8 +183,8 @@ def learn(dataset: str,
     loss = nn.CrossEntropyLoss()
 
     with ModelFileContext(network, save_dir) as (save_cb, loaded_epoch):
-        train(network, opti, loss, train_data_loader, val_data_loader, epochs=epochs, batch_frag=batch_frag,
-              device='cuda', scheduler=lr_scheduler, save_cb=save_cb, start_epoch=loaded_epoch)
+        train(network, opti, loss, train_data_loader, val_data_loader, batch_frag=batch_frag,
+              device='cuda', save_cb=save_cb, start_epoch=loaded_epoch, **train_config)
 
 
 if __name__ == '__main__':
