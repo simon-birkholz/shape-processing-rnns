@@ -4,6 +4,7 @@ import os
 from typing import Union
 
 import torch
+import torch.nn.utils
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
@@ -47,7 +48,7 @@ def train(model,
     if lr_scheduler is not None:
         print('Using degrading learning rate')
         if lr_scheduler == 'step':
-            scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
+            lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
 
     model.to(device)
     for epoch in range(start_epoch, epochs, 1):
@@ -71,7 +72,7 @@ def train(model,
             # weights update
             if ((batch_idx + 1) % batch_frag == 0) or (batch_idx + 1 == len(train_loader)):
                 if do_gradient_clipping:
-                    torch.clip_grad_value_(model.parameters(), clip_value)
+                    torch.nn.utils.clip_grad_value_(model.parameters(), clip_value)
                 optimizer.step()
                 optimizer.zero_grad()
 
@@ -123,7 +124,7 @@ def train(model,
         if lr_scheduler is not None:
             lr_scheduler.step()
 
-        if save_cb is not None and (epochs + 1) % 10:
+        if save_cb is not None and (epochs + 1) % 10 == 0:
             save_cb(epoch + 1)
 
 
