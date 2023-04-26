@@ -137,6 +137,7 @@ def learn(dataset: str,
           momentum: float,
           model_base: str,
           optimizer: str,
+          weight_decay: int = 0,
           batch_frag: int = -1,
           batch_max: int = -1,
           **config):
@@ -168,11 +169,13 @@ def learn(dataset: str,
         raise ValueError(f'Unknown base architecture {model_base}')
 
     if optimizer == 'adam':
-        opti = optim.AdamW(network.parameters(), lr=intern_learning_rate)
+        opti = optim.Adam(network.parameters(), lr=intern_learning_rate, weight_decay=weight_decay)
     elif optimizer == 'sgd':
-        opti = optim.SGD(network.parameters(), lr=intern_learning_rate, momentum=momentum, nesterov=True)
+        opti = optim.SGD(network.parameters(), lr=intern_learning_rate, momentum=momentum, nesterov=True,
+                         weight_decay=weight_decay)
     elif optimizer == 'rms':
-        opti = optim.RMSprop(network.parameters(), lr=intern_learning_rate, momentum=momentum)
+        opti = optim.RMSprop(network.parameters(), lr=intern_learning_rate, momentum=momentum,
+                             weight_decay=weight_decay)
     else:
         raise ValueError(f'Unknown optimizer {optimizer}')
 
