@@ -49,6 +49,8 @@ def train(model,
         print('Using degrading learning rate')
         if lr_scheduler == 'step':
             lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
+        else:
+            lr_scheduler = None
 
     model.to(device)
     for epoch in range(start_epoch, epochs, 1):
