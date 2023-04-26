@@ -11,8 +11,7 @@ from tqdm import tqdm
 import wandb
 from datasets.selection import select_dataset
 from models.architecture import FeedForwardTower
-from utils import EarlyStopping, WBContext, ModelFileContext
-import inspect
+from utils import EarlyStopping, WBContext, ModelFileContext, get_args_names
 
 
 def train(model,
@@ -37,7 +36,7 @@ def train(model,
         print('Could not find wandb.run object')
 
     if do_gradient_clipping:
-        clip_value = 3
+        clip_value = 1
 
     do_early_stopping = False
     if epochs == 'early-stop':
@@ -72,7 +71,7 @@ def train(model,
             # weights update
             if ((batch_idx + 1) % batch_frag == 0) or (batch_idx + 1 == len(train_loader)):
                 if do_gradient_clipping:
-                    clip_grad_value_(model.parameters(), clip_value)
+                    torch.clip_grad_value_(model.parameters(), clip_value)
                 optimizer.step()
                 optimizer.zero_grad()
 
@@ -154,11 +153,11 @@ def learn(dataset: str,
 
     train_data_loader, val_data_loader, num_classes = select_dataset(dataset, dataset_path, dataset_val_path,
                                                                      intern_batch_size)
-    model_args = inspect.getfullargspec(FeedForwardTower.__init__).args
-    train_args = inspect.getfullargspec(train).args
+    model_args = get_args_names(FeedForwardTower.__init__)
+    train_args = get_args_names(train)
 
-    model_config = {k: v for k, v in config if k in model_args}
-    train_config = {k: v for k, v in config if k in train_args}
+    model_config = {k: v for k, v in config.items() if k in model_args}
+    train_config = {k: v for k, v in config.items() if k in train_args}
 
     if model_base == 'ff_tower':
         network = FeedForwardTower(num_classes=num_classes, **model_config)

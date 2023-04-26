@@ -6,6 +6,10 @@ from pathlib import Path
 import json
 import torch
 import os
+import inspect
+def get_args_names(fn):
+    sign = inspect.getfullargspec(fn)
+    return sign.args + sign.kwonlyargs
 
 class EarlyStopping:
     def __init__(self, tolerance=5):
