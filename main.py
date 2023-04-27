@@ -14,6 +14,8 @@ from datasets.selection import select_dataset
 from models.architecture import FeedForwardTower
 from utils import EarlyStopping, WBContext, ModelFileContext, get_args_names
 
+from arguments import OPTIMIZERS, LR_SCHEDULER, get_argument_instance
+
 
 def train(model,
           optimizer,
@@ -45,12 +47,7 @@ def train(model,
         do_early_stopping = True
         early_stopping = EarlyStopping(tolerance=5)
 
-    if lr_scheduler is not None:
-        print('Using degrading learning rate')
-        if lr_scheduler == 'step':
-            lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
-        else:
-            lr_scheduler = None
+    lr_scheduler = get_argument_instance(LR_SCHEDULER,lr_scheduler,optimizer)
 
     model.to(device)
     for epoch in range(start_epoch, epochs, 1):
@@ -170,16 +167,8 @@ def learn(dataset: str,
     else:
         raise ValueError(f'Unknown base architecture {model_base}')
 
-    if optimizer == 'adam':
-        opti = optim.Adam(network.parameters(), lr=intern_learning_rate, weight_decay=weight_decay)
-    elif optimizer == 'sgd':
-        opti = optim.SGD(network.parameters(), lr=intern_learning_rate, momentum=momentum, nesterov=True,
-                         weight_decay=weight_decay)
-    elif optimizer == 'rms':
-        opti = optim.RMSprop(network.parameters(), lr=intern_learning_rate, momentum=momentum,
-                             weight_decay=weight_decay)
-    else:
-        raise ValueError(f'Unknown optimizer {optimizer}')
+    opti = get_argument_instance(OPTIMIZERS, optimizer, network.parameters(), lr=intern_learning_rate,
+                                 weight_decay=weight_decay, momentum=momentum)
 
     parameter_counter = sum(p.numel() for p in network.parameters())
 
