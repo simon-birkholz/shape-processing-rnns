@@ -197,41 +197,65 @@ class ReciprocalGatedCell(torch.nn.Module):
                  in_channels: int,
                  out_channels: int,
                  kernel_size: KernelArg,
+                 stride,
+                 activation,
+                 normalization,
                  bias: bool = True):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.bias = bias
-        self.nonlinearity = 'relu'
+        self.nonlinearity = activation
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.normalization = normalization
+
+        # employ a convolution before the reciprocal gated cell because the input gets gated by the hidden state, unlike all other cells
+
+        if stride > 1:
+            self.preconv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                 stride=stride)
+        else:
+            self.preconv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                 stride=stride,
+                                 padding='same')
 
         # output gating
-        self.wch = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+        self.wch = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                              padding='same')
-        self.whh = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+        self.whh = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                              padding='same')
 
         # memory gating
-        self.whc = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+        self.whc = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                              padding='same')
-        self.wcc = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+        self.wcc = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                              padding='same')
 
     def forward(self, input, hidden_state=None):
 
         if hidden_state is None:
-            h_cur = Variable(input.new_zeros(input.size(0), self.out_channels, input.size(2), input.size(3)))
-            c_cur = Variable(input.new_zeros(input.size(0), self.out_channels, input.size(2), input.size(3)))
+            if self.stride == 1:
+                os1 = input.size(2)
+                os2 = input.size(3)
+            else:
+                os1 = calculate_output_dimension(input.size(2), self.kernel_size, 0, self.stride)
+                os2 = calculate_output_dimension(input.size(3), self.kernel_size, 0, self.stride)
+
+            h_cur = Variable(input.new_zeros(input.size(0), self.out_channels, os1, os2))
+            c_cur = Variable(input.new_zeros(input.size(0), self.out_channels, os1, os2))
         else:
             h_cur, c_cur = hidden_state
 
         # TODO support different activation functions
+        x = self.preconv(input)
 
         # output gating
-        h_next = (1 - F.sigmoid(self.wch(c_cur))) * input + (1 - F.sigmoid(self.whh(h_cur))) * h_cur
+        h_next = (1 - F.sigmoid(self.wch(c_cur))) * x + (1 - F.sigmoid(self.whh(h_cur))) * h_cur
         h_next = F.tanh(h_next)
 
         # memory gating
-        c_next = (1 - F.sigmoid(self.whc(h_cur))) * input + (1 - F.sigmoid(self.wcc(c_cur))) * c_cur
+        c_next = (1 - F.sigmoid(self.whc(h_cur))) * x + (1 - F.sigmoid(self.wcc(c_cur))) * c_cur
         c_next = F.tanh(c_next)
 
         return h_next, c_next
