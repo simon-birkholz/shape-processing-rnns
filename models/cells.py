@@ -11,6 +11,16 @@ from .utils import _pair, calculate_output_dimension
 KernelArg = Union[int, Sequence[int]]
 
 
+def get_maybe_padded_conv(in_channels: int, out_channels: int, kernel_size: KernelArg, stride: int):
+    if stride > 1:
+        return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                         stride=stride)
+    else:
+        return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                         stride=stride,
+                         padding='same')
+
+
 class ConvRNNCell(torch.nn.Module):
     def __init__(self,
                  in_channels: int,
@@ -43,13 +53,8 @@ class ConvRNNCell(torch.nn.Module):
         # In our formulas option 3 is used for all gates
 
         # todo padding und bias
-        if stride > 1:
-            self.x2h = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                 stride=stride)
-        else:
-            self.x2h = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                 stride=stride,
-                                 padding='same')
+        self.x2h = get_maybe_padded_conv(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                         stride=stride)
 
         self.h2h = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                              padding='same')
@@ -94,35 +99,20 @@ class ConvGruCell(torch.nn.Module):
         self.normalization = normalization
 
         # reset gate
-        if stride > 1:
-            self.wr = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                stride=stride)
-        else:
-            self.wr = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                stride=stride,
-                                padding='same')
+        self.wr = get_maybe_padded_conv(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                        stride=stride)
         self.ur = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                             padding='same')
 
         # update gate
-        if stride > 1:
-            self.wz = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                stride=stride)
-        else:
-            self.wz = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                stride=stride,
-                                padding='same')
+        self.wz = get_maybe_padded_conv(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                        stride=stride)
         self.uz = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                             padding='same')
 
         # state candidate
-        if stride > 1:
-            self.wcan = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                  stride=stride)
-        else:
-            self.wcan = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                  stride=stride,
-                                  padding='same')
+        self.wcan = get_maybe_padded_conv(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                          stride=stride)
         self.ucan = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                               padding='same')
 
@@ -167,37 +157,48 @@ class ConvLSTMCell(torch.nn.Module):
                  in_channels: int,
                  out_channels: int,
                  kernel_size: KernelArg,
+                 stride,
+                 activation,
+                 normalization,
                  bias: bool = True):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.normalization = normalization
         self.bias = bias
-        self.nonlinearity = 'relu'
+        self.nonlinearity = activation
 
         # reset/forget gate
-        self.wf = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding='same')
+        self.wf = get_maybe_padded_conv(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                        stride=stride)
         self.uf = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                             padding='same')
         self.vf = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                             padding='same')
 
         # input gate
-        self.wi = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding='same')
+        self.wi = get_maybe_padded_conv(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                        stride=stride)
         self.ui = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                             padding='same')
         self.vi = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                             padding='same')
 
         # output gate
-        self.wo = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding='same')
+        self.wo = get_maybe_padded_conv(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                        stride=stride)
         self.uo = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                             padding='same')
         self.vo = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                             padding='same')
 
         # state candidate
-        self.can = nn.Conv2d(in_channels=in_channels + out_channels, out_channels=out_channels, kernel_size=kernel_size,
-                             padding='same')
+        self.wcan = get_maybe_padded_conv(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                          stride=stride)
+        self.ucan = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
+                              padding='same')
 
     def forward(self, input, hidden_state=None):
         # Inputs:
@@ -207,8 +208,15 @@ class ConvLSTMCell(torch.nn.Module):
         # hy: of shape (batch_size, hidden_size,height_size, width_size)
 
         if hidden_state is None:
-            h_cur = Variable(input.new_zeros(input.size(0), self.out_channels, input.size(2), input.size(3)))
-            c_cur = Variable(input.new_zeros(input.size(0), self.out_channels, input.size(2), input.size(3)))
+            if self.stride == 1:
+                os1 = input.size(2)
+                os2 = input.size(3)
+            else:
+                os1 = calculate_output_dimension(input.size(2), self.kernel_size, 0, self.stride)
+                os2 = calculate_output_dimension(input.size(3), self.kernel_size, 0, self.stride)
+
+            h_cur = Variable(input.new_zeros(input.size(0), self.out_channels, os1, os2))
+            c_cur = Variable(input.new_zeros(input.size(0), self.out_channels, os1, os2))
         else:
             h_cur, c_cur = hidden_state
 
@@ -218,9 +226,11 @@ class ConvLSTMCell(torch.nn.Module):
         input_gate = F.sigmoid(self.wi(input) + self.ui(h_cur) + self.vi(c_cur))
         output_gate = F.sigmoid(self.wo(input) + self.uo(h_cur) + self.vo(c_cur))
 
-        combined = torch.cat([input, h_cur], dim=1)
+        # combined = torch.cat([input, h_cur], dim=1)
 
-        candidate = F.tanh(self.can(combined))
+        # we now have to add elementwise
+        combined = self.wcan(input) + self.ucan(h_cur)
+        candidate = F.tanh(combined)
 
         c_next = forget_gate * c_cur + input_gate * candidate
 
@@ -249,13 +259,9 @@ class ReciprocalGatedCell(torch.nn.Module):
 
         # employ a convolution before the reciprocal gated cell because the input gets gated by the hidden state, unlike all other cells
 
-        if stride > 1:
-            self.preconv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                     stride=stride)
-        else:
-            self.preconv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                     stride=stride,
-                                     padding='same')
+        self.preconv = get_maybe_padded_conv(in_channels=in_channels, out_channels=out_channels,
+                                             kernel_size=kernel_size,
+                                             stride=stride)
 
         # output gating
         self.wch = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
