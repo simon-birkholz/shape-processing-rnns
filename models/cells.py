@@ -32,7 +32,7 @@ class ConvRNNCell(torch.nn.Module):
 
         ntuple = _pair
 
-        #self.kernel_size = ntuple(kernel_size)
+        # self.kernel_size = ntuple(kernel_size)
         # self.stride = ntuple(stride)
         # self.dilation = ntuple(dilation)
 
@@ -66,7 +66,7 @@ class ConvRNNCell(torch.nn.Module):
                 os1 = input.size(2)
                 os2 = input.size(3)
             else:
-                os1 = calculate_output_dimension(input.size(2),self.kernel_size,0,self.stride)
+                os1 = calculate_output_dimension(input.size(2), self.kernel_size, 0, self.stride)
                 os2 = calculate_output_dimension(input.size(3), self.kernel_size, 0, self.stride)
             hx = Variable(input.new_zeros(input.size(0), self.out_channels, os1, os2))
         hy = (self.x2h(input) + self.h2h(hx))
@@ -80,26 +80,54 @@ class ConvGruCell(torch.nn.Module):
                  in_channels: int,
                  out_channels: int,
                  kernel_size: KernelArg,
+                 stride,
+                 activation,
+                 normalization,
                  bias: bool = True):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
         self.bias = bias
-        self.nonlinearity = 'relu'
+        self.nonlinearity = activation
+        self.normalization = normalization
 
         # reset gate
-        self.wr = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding='same')
+        if stride > 1:
+            self.wr = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                stride=stride)
+        else:
+            self.wr = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                stride=stride,
+                                padding='same')
         self.ur = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                             padding='same')
 
         # update gate
-        self.wz = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding='same')
+        if stride > 1:
+            self.wz = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                stride=stride)
+        else:
+            self.wz = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                stride=stride,
+                                padding='same')
         self.uz = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                             padding='same')
 
         # state candidate
-        self.can = nn.Conv2d(in_channels=in_channels + out_channels, out_channels=out_channels, kernel_size=kernel_size,
-                             padding='same')
+        if stride > 1:
+            self.wcan = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                  stride=stride)
+        else:
+            self.wcan = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                  stride=stride,
+                                  padding='same')
+        self.ucan = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
+                              padding='same')
+
+        # self.can = nn.Conv2d(in_channels=in_channels + out_channels, out_channels=out_channels, kernel_size=kernel_size,
+        #                     padding='same')
 
     def forward(self, input, hx=None):
         # Inputs:
@@ -109,15 +137,24 @@ class ConvGruCell(torch.nn.Module):
         # hy: of shape (batch_size, hidden_size,height_size, width_size)
 
         if hx is None:
-            hx = Variable(input.new_zeros(input.size(0), self.out_channels, input.size(2), input.size(3)))
+            if self.stride == 1:
+                os1 = input.size(2)
+                os2 = input.size(3)
+            else:
+                os1 = calculate_output_dimension(input.size(2), self.kernel_size, 0, self.stride)
+                os2 = calculate_output_dimension(input.size(3), self.kernel_size, 0, self.stride)
+
+            hx = Variable(input.new_zeros(input.size(0), self.out_channels, os1, os2))
 
         reset_gate = F.sigmoid(self.wr(input) + self.ur(hx))
         update_gate = F.sigmoid(self.wz(input) + self.uz(hx))
 
         recalled = reset_gate * hx
-        combined = torch.cat([input, recalled], dim=1)
+        # combined = torch.cat([input, recalled], dim=1)
 
-        hy = self.can(combined)
+        # we now have to add elementwise
+        hy = self.wcan(input) + self.ucan(recalled)
+
         # TODO support different activation functions
         hy = F.relu(hy)
 
@@ -214,11 +251,11 @@ class ReciprocalGatedCell(torch.nn.Module):
 
         if stride > 1:
             self.preconv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                 stride=stride)
+                                     stride=stride)
         else:
             self.preconv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                 stride=stride,
-                                 padding='same')
+                                     stride=stride,
+                                     padding='same')
 
         # output gating
         self.wch = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
