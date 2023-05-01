@@ -30,7 +30,7 @@ class ConvBlock(nn.Module):
         if normalization == 'batchnorm':
             self.norm = nn.BatchNorm2d(out_channels)
         elif normalization == 'layernorm':
-        	self.norm = nn.GroupNorm(1,out_channels)
+            self.norm = nn.GroupNorm(1, out_channels)
         self.activation = activation
 
     def forward(self, x):
@@ -39,15 +39,16 @@ class ConvBlock(nn.Module):
         out = self.activation(out)
         return out
 
+
 class ConvWrapper(torch.nn.Module):
     def __init__(self, in_channels, out_channels, kernel):
         super(ConvWrapper, self).__init__()
 
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel,  padding='same')
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel, padding='same')
         self.activation = F.relu
 
     def forward(self, x, hx=None):
-       return self.activation(self.conv(x))
+        return self.activation(self.conv(x))
 
 
 NORMAL_FILTERS = [64, 128, 256, 256, 512]
@@ -88,7 +89,8 @@ class FeedForwardTower(torch.nn.Module):
         self.time_steps = time_steps
 
         if self.cell_type == 'conv':
-            self.time_steps = 1 # no unrollment necessary
+            self.time_steps = 1  # no unrollment necessary
+
             def get_cell(*args, **kwargs):
                 return ConvWrapper(*args, **kwargs)
         elif self.cell_type == 'gru':
@@ -126,8 +128,12 @@ class FeedForwardTower(torch.nn.Module):
         stride_sizes = [2] + [1] * (len(filter_counts) - 2)
         print(kernel_sizes)
 
-        self.conv_blocks = nn.ModuleList(
-            [ConvBlock(ins, outs, ks, ss, self.activation, normalization) for (ins, outs), ks, ss in
+        # self.conv_blocks = nn.ModuleList(
+        #    [ConvBlock(ins, outs, ks, ss, self.activation, normalization) for (ins, outs), ks, ss in
+        #     zip(pairwise(filter_counts), kernel_sizes, stride_sizes)])
+
+        self.cell_blocks = nn.ModuleList(
+            [get_cell(ins, outs, ks, ss, self.activation, normalization) for (ins, outs), ks, ss in
              zip(pairwise(filter_counts), kernel_sizes, stride_sizes)])
 
         self.last_conv = nn.Conv2d(filter_counts[-1], self.num_classes, 2, 1, padding='same')
@@ -135,14 +141,14 @@ class FeedForwardTower(torch.nn.Module):
         self.flatten = nn.Flatten()
         self.pooling = nn.MaxPool2d(kernel_size=2)
 
-        self.cell_blocks = nn.ModuleList([get_cell(f,f,cell_kernel) for f in filter_counts[1:]])
+        # self.cell_blocks = nn.ModuleList([get_cell(f,f,cell_kernel) for f in filter_counts[1:]])
 
-        #if self.auxiliary_classifier:
+        # if self.auxiliary_classifier:
         #    self.layer_two_thirds = int(len(filter_counts) * (2/3)) -1
         #    self.aux_cls = AxuiliaryClassifier(filter_counts[self.layer_two_thirds],num_classes,self.activation,'batchnorm')
 
         if self.cell_type in ['conv', 'rnn', 'gru']:
-            self.get_x = lambda out : out
+            self.get_x = lambda out: out
         elif self.cell_type in ['lstm', 'reciprocal']:
             self.get_x = lambda out: out[0]
 
@@ -152,8 +158,8 @@ class FeedForwardTower(torch.nn.Module):
         for t in range(0, self.time_steps):
             x = input
             for i in range(len(self.cell_blocks)):
-                x = self.conv_blocks[i](x)
-                x = self.cell_blocks[i](x,hidden[i])
+                #x = self.conv_blocks[i](x)
+                x = self.cell_blocks[i](x, hidden[i])
                 hidden[i] = x
                 x = self.get_x(x)
                 x = self.pooling(x)
@@ -163,7 +169,7 @@ class FeedForwardTower(torch.nn.Module):
 
         x = F.softmax(x, dim=1)
 
-        #if self.auxiliary_classifier:
+        # if self.auxiliary_classifier:
         #    aux_output = self.aux_cls(aux_input)
         #    return x, aux_output
 

@@ -6,43 +6,55 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import torch.jit as jit
 
-
-from .utils import _pair
+from .utils import _pair, calculate_output_dimension
 
 KernelArg = Union[int, Sequence[int]]
+
 
 class ConvRNNCell(torch.nn.Module):
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
                  kernel_size: KernelArg,
-                 bias: bool=True):
+                 stride,
+                 activation,
+                 normalization,
+                 bias: bool = True):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.bias = bias
-        self.nonlinearity = 'relu'
-
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.activation = activation
+        self.normalization = normalization
         self.ndim = 2
 
         ntuple = _pair
 
-        self.kernel_size = ntuple(kernel_size)
-        #self.stride = ntuple(stride)
-        #self.dilation = ntuple(dilation)
+        #self.kernel_size = ntuple(kernel_size)
+        # self.stride = ntuple(stride)
+        # self.dilation = ntuple(dilation)
 
-        #TODO there are multiple options for combining the hidden state and the input state
+        # TODO there are multiple options for combining the hidden state and the input state
         # 1. Concat beforehand and then convolution
         # 2. Elementwise addition and then convolution (Hidden State and Input state would need the same dimensions
         # 3. Two convolution and then elementwise addition
         # In our formulas option 3 is used for all gates
 
         # todo padding und bias
-        self.x2h = nn.Conv2d(in_channels=in_channels,out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        if stride > 1:
+            self.x2h = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                 stride=stride)
+        else:
+            self.x2h = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                                 stride=stride,
+                                 padding='same')
 
-        self.h2h = nn.Conv2d(in_channels=out_channels,out_channels=out_channels,kernel_size=kernel_size,padding='same')
+        self.h2h = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
+                             padding='same')
 
-    def forward(self,input ,hx=None):
+    def forward(self, input, hx=None):
         # Inputs:
         # input: of shape (batch_size, input_size,height_size, width_size)
         # hx: of shape (batch_size, hidden_size,height_size, width_size)
@@ -50,11 +62,18 @@ class ConvRNNCell(torch.nn.Module):
         # hy: of shape (batch_size, hidden_size,height_size, width_size)
 
         if hx is None:
-            hx = Variable(input.new_zeros(input.size(0), self.out_channels, input.size(2), input.size(3)))
+            if self.stride == 1:
+                os1 = input.size(2)
+                os2 = input.size(3)
+            else:
+                os1 = calculate_output_dimension(input.size(2),self.kernel_size,0,self.stride)
+                os2 = calculate_output_dimension(input.size(3), self.kernel_size, 0, self.stride)
+            hx = Variable(input.new_zeros(input.size(0), self.out_channels, os1, os2))
         hy = (self.x2h(input) + self.h2h(hx))
         # TODO support different activation functions
-        hy = F.relu(hy)
+        hy = self.activation(hy)
         return hy
+
 
 class ConvGruCell(torch.nn.Module):
     def __init__(self,
@@ -69,18 +88,20 @@ class ConvGruCell(torch.nn.Module):
         self.nonlinearity = 'relu'
 
         # reset gate
-        self.wr = nn.Conv2d(in_channels=in_channels,out_channels=out_channels, kernel_size=kernel_size,padding='same')
-        self.ur = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.wr = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding='same')
+        self.ur = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
+                            padding='same')
 
         # update gate
-        self.wz = nn.Conv2d(in_channels=in_channels,out_channels=out_channels, kernel_size=kernel_size,padding='same')
-        self.uz = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.wz = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding='same')
+        self.uz = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
+                            padding='same')
 
         # state candidate
-        self.can = nn.Conv2d(in_channels=in_channels + out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.can = nn.Conv2d(in_channels=in_channels + out_channels, out_channels=out_channels, kernel_size=kernel_size,
+                             padding='same')
 
-
-    def forward(self,input ,hx=None):
+    def forward(self, input, hx=None):
         # Inputs:
         # input: of shape (batch_size, input_size,height_size, width_size)
         # hx: of shape (batch_size, hidden_size,height_size, width_size)
@@ -94,7 +115,7 @@ class ConvGruCell(torch.nn.Module):
         update_gate = F.sigmoid(self.wz(input) + self.uz(hx))
 
         recalled = reset_gate * hx
-        combined = torch.cat([input,recalled], dim=1)
+        combined = torch.cat([input, recalled], dim=1)
 
         hy = self.can(combined)
         # TODO support different activation functions
@@ -117,25 +138,31 @@ class ConvLSTMCell(torch.nn.Module):
         self.nonlinearity = 'relu'
 
         # reset/forget gate
-        self.wf = nn.Conv2d(in_channels=in_channels,out_channels=out_channels, kernel_size=kernel_size,padding='same')
-        self.uf = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
-        self.vf = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.wf = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding='same')
+        self.uf = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
+                            padding='same')
+        self.vf = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
+                            padding='same')
 
         # input gate
-        self.wi = nn.Conv2d(in_channels=in_channels,out_channels=out_channels, kernel_size=kernel_size,padding='same')
-        self.ui = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
-        self.vi = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.wi = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding='same')
+        self.ui = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
+                            padding='same')
+        self.vi = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
+                            padding='same')
 
         # output gate
-        self.wo = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
-        self.uo = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
-        self.vo = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.wo = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding='same')
+        self.uo = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
+                            padding='same')
+        self.vo = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
+                            padding='same')
 
         # state candidate
-        self.can = nn.Conv2d(in_channels=in_channels + out_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.can = nn.Conv2d(in_channels=in_channels + out_channels, out_channels=out_channels, kernel_size=kernel_size,
+                             padding='same')
 
-
-    def forward(self,input ,hidden_state=None):
+    def forward(self, input, hidden_state=None):
         # Inputs:
         # input: of shape (batch_size, input_size,height_size, width_size)
         # hx: of shape (batch_size, hidden_size,height_size, width_size)
@@ -154,7 +181,7 @@ class ConvLSTMCell(torch.nn.Module):
         input_gate = F.sigmoid(self.wi(input) + self.ui(h_cur) + self.vi(c_cur))
         output_gate = F.sigmoid(self.wo(input) + self.uo(h_cur) + self.vo(c_cur))
 
-        combined = torch.cat([input, h_cur],dim=1)
+        combined = torch.cat([input, h_cur], dim=1)
 
         candidate = F.tanh(self.can(combined))
 
@@ -178,14 +205,18 @@ class ReciprocalGatedCell(torch.nn.Module):
         self.nonlinearity = 'relu'
 
         # output gating
-        self.wch = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
-        self.whh = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.wch = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                             padding='same')
+        self.whh = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                             padding='same')
 
         # memory gating
-        self.whc = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
-        self.wcc = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,padding='same')
+        self.whc = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                             padding='same')
+        self.wcc = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
+                             padding='same')
 
-    def forward(self,input ,hidden_state=None):
+    def forward(self, input, hidden_state=None):
 
         if hidden_state is None:
             h_cur = Variable(input.new_zeros(input.size(0), self.out_channels, input.size(2), input.size(3)))

@@ -39,7 +39,7 @@ def train(model,
         print('Could not find wandb.run object')
 
     if do_gradient_clipping:
-        clip_value = 1
+        clip_value = 0.7
 
     do_early_stopping = False
     if epochs == 'early-stop':
