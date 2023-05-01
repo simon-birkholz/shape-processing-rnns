@@ -41,11 +41,14 @@ class ConvBlock(nn.Module):
 
 
 class ConvWrapper(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, kernel):
+    def __init__(self, in_channels, out_channels, kernel, stride, activation, normalization):
         super(ConvWrapper, self).__init__()
 
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel, padding='same')
-        self.activation = F.relu
+        if stride > 1:
+            self.conv = nn.Conv2d(in_channels, out_channels, kernel, stride)
+        else:
+            self.conv = nn.Conv2d(in_channels, out_channels, kernel, stride, padding='same')
+        self.activation = activation
 
     def forward(self, x, hx=None):
         return self.activation(self.conv(x))
