@@ -97,16 +97,19 @@ def get_max_value(runs, attr):
     keep_data = [history for run in runs if len(history := run.history()) > 0]
     return max([df.max()[attr] for df in keep_data])
 
-def plot_runs_accuracy(runs, title, label_attr='learning_rate'):
+def plot_runs_accuracy(runs, title, label_attr='learning_rate',show_top=1.0):
+    sorted_runs = sorted(runs, key=default_sort, reverse=True)
+    keep_runs = sorted_runs[:int(len(sorted_runs) * show_top)]
+
     fig, (ax1,ax2) = plt.subplots(1,2)
     fig.set_figwidth(20)
     fig.suptitle(title)
 
-    max_val = max(get_max_value(runs,'train_acc'), get_max_value(runs,'val_acc'))
+    max_val = max(get_max_value(keep_runs,'train_acc'), get_max_value(keep_runs,'val_acc'))
 
-    plot_runs_attr(runs,ax1,('val_acc', 'Validation Accuracy'),label_attr,max_val=max_val)
+    plot_runs_attr(keep_runs,ax1,('val_acc', 'Validation Accuracy'),label_attr,max_val=max_val)
 
-    plot_runs_attr(runs, ax2, ('train_acc', 'Training Accuracy'), label_attr,max_val=max_val)
+    plot_runs_attr(keep_runs, ax2, ('train_acc', 'Training Accuracy'), label_attr,max_val=max_val)
 
     plt.show()
 
@@ -136,7 +139,6 @@ if __name__ == '__main__':
 
     GROUP = 'kw14-test-functionality'
     # test_sweep = get_sweep_by_name('fftower-conv')
-
     runs = get_runs_by_regex('f', group=GROUP)
 
     total_pwr = get_power_consumption(runs)

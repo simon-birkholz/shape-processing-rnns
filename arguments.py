@@ -8,6 +8,12 @@ OPTIMIZERS = {
             'weight_decay': None
         }
     },
+    'adamw': {
+        'fn': lambda *args, **kwargs: optim.AdamW(*args, **kwargs),
+        'args': {
+            'lr': None
+        }
+    },
     'sgd': {
         'fn': lambda *args, **kwargs: optim.SGD(*args, **kwargs),
         'args': {
