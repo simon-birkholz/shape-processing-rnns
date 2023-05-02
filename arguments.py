@@ -37,7 +37,7 @@ LR_SCHEDULER = {
     'step' : {
         'fn' : lambda *args, **kwargs: optim.lr_scheduler.StepLR(*args, **kwargs),
         'args' : {
-            'step_size' : 30,
+            'step_size' : 3,
             'gamma' : 0.1
         }
     }

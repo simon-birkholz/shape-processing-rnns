@@ -55,6 +55,10 @@ class ConvWrapper(torch.nn.Module):
 
 
 NORMAL_FILTERS = [64, 128, 256, 256, 512]
+NORMAL_POOLS = [True, True, True, True, True]
+
+MORE_FILTERS = [64, 64, 128, 128, 256, 256, 512, 512]
+MORE_POOLS = [True, False, True, False, True, False, True, True]
 WIDER_FILTERS = [128, 512, 512, 512, 1024]
 DEEPER_FILTERS = [64, 64, 64, 128, 128, 256, 256, 512, 512, 512]
 
@@ -113,8 +117,13 @@ class FeedForwardTower(torch.nn.Module):
 
         if tower_type == 'normal':
             filter_counts = [3] + NORMAL_FILTERS
+            self.do_pooling = NORMAL_POOLS
+        elif tower_type == 'more':
+            filter_counts = [3] + MORE_FILTERS
+            self.do_pooling = MORE_POOLS
         elif tower_type == 'wider':
             filter_counts = [3] + WIDER_FILTERS
+            self.do_pooling = NORMAL_POOLS
         elif tower_type == 'deeper':
             filter_counts = [3] + DEEPER_FILTERS
         else:
@@ -161,11 +170,13 @@ class FeedForwardTower(torch.nn.Module):
         for t in range(0, self.time_steps):
             x = input
             for i in range(len(self.cell_blocks)):
-                #x = self.conv_blocks[i](x)
+                # x = self.conv_blocks[i](x)
                 x = self.cell_blocks[i](x, hidden[i])
                 hidden[i] = x
                 x = self.get_x(x)
-                x = self.pooling(x)
+
+                if self.do_pooling[i]:
+                    x = self.pooling(x)
 
         x = self.last_conv(x)
         x = self.flatten(x)

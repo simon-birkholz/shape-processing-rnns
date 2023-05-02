@@ -57,7 +57,7 @@ def default_sort(run):
     return run.summary.get('val_acc', 0)
 
 
-def plot_runs(runs, label_attr='learning_rate',show_top=1.0):
+def plot_runs(runs, label_attr='learning_rate', show_top=1.0):
     ax = plt.gca()
 
     sorted_runs = sorted(runs, key=default_sort, reverse=True)
@@ -69,16 +69,18 @@ def plot_runs(runs, label_attr='learning_rate',show_top=1.0):
 
     ax.set_xlabel('Epochs')
     ax.set_ylabel('Validation Accuracy')
-    legend_labels = [run_to_label(r,label_attr) for r, _ in keep_data]
+    legend_labels = [run_to_label(r, label_attr) for r, _ in keep_data]
     ax.legend(legend_labels)
 
     plt.show()
 
+
 def plot_runs_attr(runs,
                    ax,
-                   attr: Tuple[str,str],
+                   attr: Tuple[str, str],
                    label_attr='learning_rate',
                    max_val=1.0,
+                   min_val=0.0,
                    show_top=1.0):
     sorted_runs = sorted(runs, key=default_sort, reverse=True)
     keep_runs = sorted_runs[:int(len(sorted_runs) * show_top)]
@@ -89,27 +91,52 @@ def plot_runs_attr(runs,
 
     ax.set_xlabel('Epochs')
     ax.set_ylabel(attr[1])
-    ax.set_ylim([0,max_val])
-    legend_labels = [run_to_label(r,label_attr) for r, _ in keep_data]
+    ax.set_ylim([min_val, max_val])
+    legend_labels = [run_to_label(r, label_attr) for r, _ in keep_data]
     ax.legend(legend_labels)
+
 
 def get_max_value(runs, attr):
     keep_data = [history for run in runs if len(history := run.history()) > 0]
     return max([df.max()[attr] for df in keep_data])
 
-def plot_runs_accuracy(runs, title, label_attr='learning_rate',show_top=1.0):
+
+def get_min_value(runs, attr):
+    keep_data = [history for run in runs if len(history := run.history()) > 0]
+    return min([df.min()[attr] for df in keep_data])
+
+
+def plot_runs_accuracy(runs, title, label_attr='learning_rate', show_top=1.0):
     sorted_runs = sorted(runs, key=default_sort, reverse=True)
     keep_runs = sorted_runs[:int(len(sorted_runs) * show_top)]
 
-    fig, (ax1,ax2) = plt.subplots(1,2)
+    fig, (ax1, ax2) = plt.subplots(1, 2)
     fig.set_figwidth(20)
     fig.suptitle(title)
 
-    max_val = max(get_max_value(keep_runs,'train_acc'), get_max_value(keep_runs,'val_acc'))
+    max_val = max(get_max_value(keep_runs, 'train_acc'), get_max_value(keep_runs, 'val_acc'))
 
-    plot_runs_attr(keep_runs,ax1,('val_acc', 'Validation Accuracy'),label_attr,max_val=max_val)
+    plot_runs_attr(keep_runs, ax1, ('val_acc', 'Validation Accuracy'), label_attr, max_val=max_val)
 
-    plot_runs_attr(keep_runs, ax2, ('train_acc', 'Training Accuracy'), label_attr,max_val=max_val)
+    plot_runs_attr(keep_runs, ax2, ('train_acc', 'Training Accuracy'), label_attr, max_val=max_val)
+
+    plt.show()
+
+
+def plot_runs_loss(runs, title, label_attr='learning_rate', show_top=1.0):
+    sorted_runs = sorted(runs, key=default_sort, reverse=True)
+    keep_runs = sorted_runs[:int(len(sorted_runs) * show_top)]
+
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    fig.set_figwidth(20)
+    fig.suptitle(title)
+
+    max_val = max(get_max_value(keep_runs, 'training_loss'), get_max_value(keep_runs, 'val_loss'))
+    min_val = min(get_min_value(keep_runs, 'training_loss'), get_min_value(keep_runs, 'val_loss'))
+
+    plot_runs_attr(keep_runs, ax1, ('val_loss', 'Validation Loss'), label_attr, max_val=max_val, min_val=min_val)
+
+    plot_runs_attr(keep_runs, ax2, ('training_loss', 'Training Loss'), label_attr, max_val=max_val, min_val=min_val)
 
     plt.show()
 
@@ -131,8 +158,9 @@ def get_metadata(run):
 
 def get_power_consumption(runs):
     power_consumtion = [((mdata := get_metadata(r))['runtime'] / 3600, mdata['avg_power_watts']) for r in runs]
-    total_wh = sum([t* w for t, w in power_consumtion])
+    total_wh = sum([t * w for t, w in power_consumtion])
     return total_wh
+
 
 if __name__ == '__main__':
     init_wandb_api()
