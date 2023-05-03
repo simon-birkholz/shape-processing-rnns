@@ -85,6 +85,7 @@ class FeedForwardTower(torch.nn.Module):
                  time_steps=1,
                  normalization='batchnorm',
                  auxiliary_classifier=False,
+                 classifier_head=False,
                  **kwargs):
         super().__init__()
         for k, v in kwargs.items():
@@ -93,6 +94,7 @@ class FeedForwardTower(torch.nn.Module):
         self.num_classes = num_classes
         self.cell_kernel = cell_kernel
         self.auxiliary_classifier = auxiliary_classifier
+        self.classifier_head = classifier_head
         self.time_steps = time_steps
 
         if self.cell_type == 'conv':
@@ -151,6 +153,9 @@ class FeedForwardTower(torch.nn.Module):
         self.last_conv = nn.Conv2d(filter_counts[-1], self.num_classes, 2, 1, padding='same')
 
         self.flatten = nn.Flatten()
+
+        if self.classifier_head:
+            self.fc = nn.Linear(self.num_classes * 3 * 3,self.num_classes)
         self.pooling = nn.MaxPool2d(kernel_size=2)
 
         # self.cell_blocks = nn.ModuleList([get_cell(f,f,cell_kernel) for f in filter_counts[1:]])
@@ -180,6 +185,9 @@ class FeedForwardTower(torch.nn.Module):
 
         x = self.last_conv(x)
         x = self.flatten(x)
+
+        if self.classifier_head:
+            x = self.fc(x)
 
         x = F.softmax(x, dim=1)
 
