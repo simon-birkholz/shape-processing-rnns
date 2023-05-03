@@ -7,9 +7,12 @@ import json
 import torch
 import os
 import inspect
+
+
 def get_args_names(fn):
     sign = inspect.getfullargspec(fn)
     return sign.args + sign.kwonlyargs
+
 
 class EarlyStopping:
     def __init__(self, tolerance=5):
@@ -29,8 +32,10 @@ class EarlyStopping:
                 return True
         return False
 
+
 ENTITY = 'cenrypol'
 PROJECT = 'shape-processing-rnns'
+
 
 class WBContext:
 
@@ -38,35 +43,48 @@ class WBContext:
         self.entity = ENTITY
         self.project = PROJECT
 
-        self.suppress = config.get('wb_suppress') is not None
+        self.suppress = config.get('wb_suppress', False)
         self.sweep = config.pop('wb_sweep_id', None)
         config.pop('wb_suppress', None)
         self.params = config.copy()
         self.group = config.pop('wb_group', None)
+        self.run_name = config.pop('wb_run_name', None)
         self.config = config
 
     def __enter__(self):
         if not self.suppress:
+
+            additional_args = dict()
+            if self.group:
+                additional_args['group'] = self.group
+
+            if self.run_name:
+                additional_args['name'] = self.run_name
+
             if self.sweep is not None:
                 print('Detected Sweep Configuration')
                 complete_sweep_id = f'{self.entity}/{self.project}/{self.sweep}'
+
                 def train_fun_wrapper(train_fun):
                     self.run = wandb.init(
-                        group=self.group,
-                        config=dict(params=self.params)
+                        config=dict(params=self.params),
+                        **additional_args
                     )
-                    updated_values = dict(self.config,**self.run.config)
-                    updated_values.pop('params',None)
+                    updated_values = dict(self.config, **self.run.config)
+                    updated_values.pop('params', None)
                     train_fun(**updated_values)
+
                 def agent_wrapper(train_fun):
-                    wandb.agent(sweep_id=complete_sweep_id, function=functools.partial(train_fun_wrapper,train_fun), count=1)
+                    wandb.agent(sweep_id=complete_sweep_id, function=functools.partial(train_fun_wrapper, train_fun),
+                                count=1)
+
                 return agent_wrapper
             else:
                 self.run = wandb.init(
                     project=self.project,
                     entity=self.entity,
-                    group=self.group,
-                    config=dict(params=self.params)
+                    config=dict(params=self.params),
+                    **additional_args
                 )
                 return self.config
         else:
@@ -76,6 +94,7 @@ class WBContext:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if not self.suppress:
             self.run.finish()
+
 
 class ModelFileContext:
     def __init__(self, network: torch.nn.Module, outpath: str, do_reload=True):
@@ -89,7 +108,7 @@ class ModelFileContext:
         prefix = self.outpath.stem
         loaded = 0
         if self.do_reload and info_file.exists():
-            with open(info_file,'r') as f:
+            with open(info_file, 'r') as f:
                 self.checkpoints = json.load(f)
 
             best_checkpoint = max(self.checkpoints)
@@ -111,8 +130,8 @@ class ModelFileContext:
         torch.save(self.network.state_dict(), checkpoint_file)
         self.checkpoints.append(epoch)
         info_file = Path(f'{self.outpath.stem}.info')
-        with open(info_file,'w') as f:
-            json.dump(self.checkpoints,f)
+        with open(info_file, 'w') as f:
+            json.dump(self.checkpoints, f)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         print(f'Saving model at {self.outpath}')

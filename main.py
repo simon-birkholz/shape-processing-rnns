@@ -187,6 +187,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('config_file', type=str, help='Config file for models', nargs='+')
     parser.add_argument('--out', type=str, help='name for saving the model', default='test_run')
+    parser.add_argument('--wb-name', type=str, help='if wandb is used this will be the run name', default=None)
 
     args = parser.parse_args()
     print(f'Executing {len(args.config_file)} configs: {" ".join(args.config_file)}')
@@ -212,6 +213,9 @@ if __name__ == '__main__':
             config['batch_max'] = -1
 
         config['save_dir'] = args.out
+        config['wb_run_name'] = args.out
+        if config['wb_run_name'] == 'none':
+            config['wb_run_name'] = None
 
         with WBContext(config) as wb:
             if callable(wb):
