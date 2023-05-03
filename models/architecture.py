@@ -8,6 +8,8 @@ import torch.jit as jit
 from .utils import _pair
 from models.cells import ConvRNNCell, ConvGruCell, ConvLSTMCell, ReciprocalGatedCell
 
+from models.cells import get_maybe_normalization, get_maybe_padded_conv
+
 KernelArg = Union[int, Sequence[int]]
 import itertools
 
@@ -23,19 +25,15 @@ class ConvBlock(nn.Module):
 
     def __init__(self, in_channels, out_channels, kernel, stride, activation, normalization):
         super(ConvBlock, self).__init__()
-        if stride > 1:
-            self.conv = nn.Conv2d(in_channels, out_channels, kernel, stride)
-        else:
-            self.conv = nn.Conv2d(in_channels, out_channels, kernel, stride, padding='same')
-        if normalization == 'batchnorm':
-            self.norm = nn.BatchNorm2d(out_channels)
-        elif normalization == 'layernorm':
-            self.norm = nn.GroupNorm(1, out_channels)
+        self.conv = get_maybe_padded_conv(in_channels,out_channels,kernel,stride)
+        self.norm = get_maybe_normalization(normalization,out_channels)
         self.activation = activation
 
     def forward(self, x):
         out = self.conv(x)
-        out = self.norm(out)
+
+        if self.norm:
+            out = self.norm(out)
         out = self.activation(out)
         return out
 
@@ -44,14 +42,16 @@ class ConvWrapper(torch.nn.Module):
     def __init__(self, in_channels, out_channels, kernel, stride, activation, normalization):
         super(ConvWrapper, self).__init__()
 
-        if stride > 1:
-            self.conv = nn.Conv2d(in_channels, out_channels, kernel, stride)
-        else:
-            self.conv = nn.Conv2d(in_channels, out_channels, kernel, stride, padding='same')
+        self.conv = get_maybe_padded_conv(in_channels, out_channels, kernel, stride)
+        self.norm = get_maybe_normalization(normalization, out_channels)
         self.activation = activation
 
     def forward(self, x, hx=None):
-        return self.activation(self.conv(x))
+        out = self.conv(x)
+        if self.norm:
+            out = self.norm(out)
+        out = self.activation(out)
+        return out
 
 
 NORMAL_FILTERS = [64, 128, 256, 256, 512]

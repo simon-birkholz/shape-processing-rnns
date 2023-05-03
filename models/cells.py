@@ -20,6 +20,14 @@ def get_maybe_padded_conv(in_channels: int, out_channels: int, kernel_size: Kern
                          stride=stride,
                          padding='same')
 
+def get_maybe_normalization(normalization,channels):
+    if normalization == 'batchnorm':
+        return nn.BatchNorm2d(channels)
+    elif normalization == 'layernorm':
+        return nn.GroupNorm(1, channels)
+    else:
+        return None
+
 
 class ConvRNNCell(torch.nn.Module):
     def __init__(self,
@@ -37,7 +45,7 @@ class ConvRNNCell(torch.nn.Module):
         self.kernel_size = kernel_size
         self.stride = stride
         self.activation = activation
-        self.normalization = normalization
+        self.norm = get_maybe_normalization(normalization,out_channels)
         self.ndim = 2
 
         ntuple = _pair
@@ -75,8 +83,11 @@ class ConvRNNCell(torch.nn.Module):
                 os2 = calculate_output_dimension(input.size(3), self.kernel_size, 0, self.stride)
             hx = Variable(input.new_zeros(input.size(0), self.out_channels, os1, os2))
         hy = (self.x2h(input) + self.h2h(hx))
-        # TODO support different activation functions
+
         hy = self.activation(hy)
+
+        if self.norm:
+            hy = self.norm(hy)
         return hy
 
 
@@ -95,8 +106,8 @@ class ConvGruCell(torch.nn.Module):
         self.kernel_size = kernel_size
         self.stride = stride
         self.bias = bias
-        self.nonlinearity = activation
-        self.normalization = normalization
+        self.activation = activation
+        self.norm = get_maybe_normalization(normalization,out_channels)
 
         # reset gate
         self.wr = get_maybe_padded_conv(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
@@ -145,10 +156,13 @@ class ConvGruCell(torch.nn.Module):
         # we now have to add elementwise
         hy = self.wcan(input) + self.ucan(recalled)
 
-        # TODO support different activation functions
-        hy = F.relu(hy)
+        hy = self.activation(hy)
 
         hy = (1 * update_gate) * hx + update_gate * hy
+
+        if self.norm:
+            hy = self.norm(hy)
+
         return hy
 
 
@@ -166,9 +180,9 @@ class ConvLSTMCell(torch.nn.Module):
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.stride = stride
-        self.normalization = normalization
+        self.norm = get_maybe_normalization(normalization,out_channels)
         self.bias = bias
-        self.nonlinearity = activation
+        self.activation = activation
 
         # reset/forget gate
         self.wf = get_maybe_padded_conv(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
@@ -230,12 +244,17 @@ class ConvLSTMCell(torch.nn.Module):
 
         # we now have to add elementwise
         combined = self.wcan(input) + self.ucan(h_cur)
-        candidate = F.tanh(combined)
+
+        candidate = self.activation(combined)
 
         c_next = forget_gate * c_cur + input_gate * candidate
 
         # TODO support different activation functions
         h_next = output_gate * F.tanh(c_next)
+
+        if self.norm:
+            h_next = self.norm(h_next)
+
         return h_next, c_next
 
 
@@ -252,10 +271,10 @@ class ReciprocalGatedCell(torch.nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.bias = bias
-        self.nonlinearity = activation
+        self.activation = activation
         self.kernel_size = kernel_size
         self.stride = stride
-        self.normalization = normalization
+        self.norm = get_maybe_normalization(normalization,out_channels)
 
         # employ a convolution before the reciprocal gated cell because the input gets gated by the hidden state, unlike all other cells
 
@@ -295,10 +314,15 @@ class ReciprocalGatedCell(torch.nn.Module):
 
         # output gating
         h_next = (1 - F.sigmoid(self.wch(c_cur))) * x + (1 - F.sigmoid(self.whh(h_cur))) * h_cur
-        h_next = F.tanh(h_next)
+        h_next = self.activation(h_next)
+
+        #h_next = F.tanh(h_next)
 
         # memory gating
         c_next = (1 - F.sigmoid(self.whc(h_cur))) * x + (1 - F.sigmoid(self.wcc(c_cur))) * c_cur
-        c_next = F.tanh(c_next)
+        c_next = self.activation(c_next)
+
+        if self.norm:
+            h_next = self.norm(h_next)
 
         return h_next, c_next
