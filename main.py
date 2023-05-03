@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import random
 from typing import Union
 
 import torch
@@ -139,7 +140,10 @@ def learn(dataset: str,
           weight_decay: int = 0,
           batch_frag: int = -1,
           batch_max: int = -1,
+          seed: int = 1,
           **config):
+    random.seed(seed)
+
     # calculated hardware requirement
     if batch_max > 0 and batch_max < batch_size:
         batch_frag = batch_size // batch_max
