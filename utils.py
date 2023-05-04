@@ -8,6 +8,15 @@ import torch
 import os
 import inspect
 
+import collections.abc as abc
+
+def traverse_obj(obj, *keys):
+    for k in keys:
+        if isinstance(obj, abc.Mapping) and k in obj.keys():
+            obj = obj[k]
+        else:
+            return None
+    return obj
 
 def get_args_names(fn):
     sign = inspect.getfullargspec(fn)

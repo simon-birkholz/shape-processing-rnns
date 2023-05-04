@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 from typing import List, Tuple, Dict
 import json
 import re
-import collections.abc as abc
 
+from utils import traverse_obj
 api = None
 project = None
 
@@ -34,15 +34,6 @@ def get_runs_by_regex(regex: str, group: str = None):
                         filters={'group': group} if group else {},
                         include_sweeps=False)
     return [r for r in all_runs if re.match(regex, r.name)]
-
-
-def traverse_obj(obj, *keys):
-    for k in keys:
-        if isinstance(obj, abc.Mapping) and k in obj.keys():
-            obj = obj[k]
-        else:
-            return None
-    return obj
 
 
 def run_to_label(run, attr) -> str:
