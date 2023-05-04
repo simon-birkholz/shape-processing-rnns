@@ -8,6 +8,7 @@ import torch
 import torch.nn.utils
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 from tqdm import tqdm
 from torchinfo import summary
 
@@ -80,7 +81,8 @@ def train(model,
                 optimizer.zero_grad()
 
             training_loss += loss.data.item()
-            predicted = torch.argmax(outputs, dim=1)
+            probabilities = F.softmax(outputs, dim=1)
+            predicted = torch.argmax(probabilities, dim=1)
             train_correct += torch.sum(predicted == targets).item()
             train_samples += predicted.shape[0]
         training_loss /= len(train_loader)
@@ -99,7 +101,8 @@ def train(model,
                 outputs = model(inputs)
                 loss = loss_fn(outputs, targets)
                 val_loss += loss.data.item()
-                predicted = torch.argmax(outputs, dim=1)
+                probabilities = F.softmax(outputs, dim=1)
+                predicted = torch.argmax(probabilities, dim=1)
                 val_correct += torch.sum(predicted == targets).item()
                 val_examples += predicted.shape[0]
             val_loss /= len(val_loader)
