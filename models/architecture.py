@@ -170,6 +170,6 @@ class FeedForwardTower(torch.nn.Module):
         if self.classifier_head:
             x = self.fc(x)
 
-        x = F.softmax(x, dim=1)
+        #x = F.softmax(x, dim=1)
 
         return x
