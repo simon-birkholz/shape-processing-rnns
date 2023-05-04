@@ -71,8 +71,6 @@ class FeedForwardTower(torch.nn.Module):
                  cell_kernel=7,
                  time_steps=1,
                  normalization='batchnorm',
-                 auxiliary_classifier=False,
-                 classifier_head=False,
                  **kwargs):
         super().__init__()
         for k, v in kwargs.items():
@@ -80,8 +78,6 @@ class FeedForwardTower(torch.nn.Module):
         self.cell_type = cell_type
         self.num_classes = num_classes
         self.cell_kernel = cell_kernel
-        self.auxiliary_classifier = auxiliary_classifier
-        self.classifier_head = classifier_head
         self.time_steps = time_steps
 
         if self.cell_type == 'conv':
@@ -137,18 +133,24 @@ class FeedForwardTower(torch.nn.Module):
             [get_cell(ins, outs, ks, ss, self.activation, normalization) for (ins, outs), ks, ss in
              zip(pairwise(filter_counts), kernel_sizes, stride_sizes)])
 
-        self.last_conv = nn.Conv2d(filter_counts[-1], self.num_classes, 2, 1, padding='same')
+        self.last_conv = nn.Conv2d(filter_counts[-1], self.num_classes, 3, 1)
 
         self.flatten = nn.Flatten()
 
-        if self.classifier_head:
-            self.fc = nn.Linear(self.num_classes * 3 * 3,self.num_classes)
         self.pooling = nn.MaxPool2d(kernel_size=2)
 
         if self.cell_type in ['conv', 'rnn', 'gru']:
             self.get_x = lambda out: out
         elif self.cell_type in ['lstm', 'reciprocal']:
             self.get_x = lambda out: out[0]
+
+        # do He initialization
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
+            elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
 
     def forward(self, input):
         x = input
@@ -166,10 +168,5 @@ class FeedForwardTower(torch.nn.Module):
 
         x = self.last_conv(x)
         x = self.flatten(x)
-
-        if self.classifier_head:
-            x = self.fc(x)
-
-        #x = F.softmax(x, dim=1)
 
         return x
