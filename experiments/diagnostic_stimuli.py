@@ -11,19 +11,23 @@ import numpy as np
 
 class FillOutMask:
     def __init__(self, inverted=False, fill=0):
-        self.fill = fill
+        self.fill = (fill,fill,fill)
         self.inverted = inverted
 
     def __call__(self, image, bbox, mask):
-        image_array = np.array(image)
+        image_array = np.array(image).astype(np.uint8)
         mask_array = np.array(mask).astype(np.uint8)
-        binary_mask = mask_array > 0
-        binary_mask = binary_mask.astype(np.uint8)
+
         if not self.inverted:
-            image_array[binary_mask > 0] = self.fill
+            target_color = (255, 255, 255)
         else:
-            image_array[binary_mask == 0] = self.fill
+            target_color = (0, 0, 0)
+
+        mask_indices = np.where((mask_array == target_color).all(axis=-1))
+        image_array[mask_indices] = self.fill
+
         return F.to_pil_image(image_array), bbox, mask
+
 
 
 class DiscardMaskAndBox():

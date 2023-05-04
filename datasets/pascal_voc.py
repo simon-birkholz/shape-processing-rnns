@@ -15,14 +15,17 @@ from utils import traverse_obj
 import xmltodict
 
 
-class WhiteOutMask:
-    def __call__(self, mask):
-        mask_array = np.array(mask).mean(axis=2).astype(np.uint8)
-        binary_mask = mask_array > 0
-        binary_mask = binary_mask.astype(np.uint8)
-        binary_mask[binary_mask != 0] = 255
-        mask = np.stack((binary_mask, binary_mask, binary_mask), axis=2)
-        return F.to_pil_image(mask)
+def white_out(mask):
+    mask_array = np.array(mask).astype(np.uint8)
+    mask_array[(mask_array != (0, 0, 0)).any(axis=-1)] = (255, 255, 255)
+    return F.to_pil_image(mask_array)
+
+
+def remove_border(img):
+    target_color = (224, 224, 192)
+    image_array = np.array(img).astype(np.uint8)
+    image_array[(image_array == target_color).all(axis=-1)] = (0, 0, 0)
+    return F.to_pil_image(image_array)
 
 
 class PascalVoc(Dataset):
@@ -79,7 +82,7 @@ class PascalVoc(Dataset):
         x = Image.open(self.samples[idx]).convert("RGB")
         mask = Image.open(self.segmasks[idx]).convert("RGB")
 
-        mask = WhiteOutMask()(mask)
+        mask = white_out(remove_border(mask))
 
         bbox = self.bndboxes[idx]
         if self.transform:
