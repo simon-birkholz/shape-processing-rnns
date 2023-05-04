@@ -4,6 +4,8 @@ import torch
 import torchvision.transforms as tfs
 import torchvision.transforms.functional as F
 
+import torch.nn.functional as TF
+
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
@@ -11,7 +13,7 @@ import numpy as np
 
 class FillOutMask:
     def __init__(self, inverted=False, fill=0):
-        self.fill = (fill,fill,fill)
+        self.fill = (fill, fill, fill)
         self.inverted = inverted
 
     def __call__(self, image, bbox, mask):
@@ -27,7 +29,6 @@ class FillOutMask:
         image_array[mask_indices] = self.fill
 
         return F.to_pil_image(image_array), bbox, mask
-
 
 
 class DiscardMaskAndBox():
@@ -120,7 +121,7 @@ tfs_foreground = tfs.Compose([MyCompose([
     FillOutMask(inverted=True, fill=255),
     DiscardMaskAndBox()
 ]),
-    tfs.Resize((224,224))])
+    tfs.Resize((224, 224))])
 
 tfs_shilouette = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
@@ -128,7 +129,7 @@ tfs_shilouette = tfs.Compose([MyCompose([
     FillOutMask(inverted=False, fill=0),
     DiscardMaskAndBox()
 ]),
-    tfs.Resize((224,224))])
+    tfs.Resize((224, 224))])
 
 tfs_frankenstein = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
@@ -136,16 +137,43 @@ tfs_frankenstein = tfs.Compose([MyCompose([
     FillOutMask(inverted=False, fill=0),
     DiscardMaskAndBox()
 ]),
-    tfs.Resize((224,224)),
+    tfs.Resize((224, 224)),
     FrankensteinFlip()])
+
+
+def classify(model,
+          data_loader,
+          device: str = 'cpu'):
+
+    model.to(device)
+
+    model.eval()
+    val_correct = 0
+    val_examples = 0
+    for batch in data_loader:
+        inputs, targets = batch
+        inputs = inputs.to(device)
+        targets = targets.to(device)
+
+        outputs = model(inputs)
+        probabilities = TF.softmax(outputs, dim=1)
+        predicted = torch.argmax(probabilities, dim=1)
+        val_correct += torch.sum(predicted == targets).item()
+        val_examples += predicted.shape[0]
+
+    val_accuracy = (val_correct / val_examples)
+    print(f'Got {val_accuracy:.2f} accuracy on diagnostic stimuli')
+
+
+
 
 if __name__ == '__main__':
     foreground_ds = PascalVoc('S:\datasets\pascal_voc', 'trainval', transform=tfs_foreground)
     shilouette_ds = PascalVoc('S:\datasets\pascal_voc', 'trainval', transform=tfs_shilouette)
     frankenstein_ds = PascalVoc('S:\datasets\pascal_voc', 'trainval', transform=tfs_frankenstein)
 
-plot_16_images(foreground_ds, 'Foreground Images')
+    plot_16_images(foreground_ds, 'Foreground Images')
 
-plot_16_images(shilouette_ds, 'Shilouette Images')
+    plot_16_images(shilouette_ds, 'Shilouette Images')
 
-plot_16_images(frankenstein_ds, 'Frankenstein Images')
+    plot_16_images(frankenstein_ds, 'Frankenstein Images')
