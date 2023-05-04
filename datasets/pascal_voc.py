@@ -1,21 +1,35 @@
 import torch
 from torchvision import datasets
 from torch.utils.data import Dataset
-from torchvision.transforms import transforms
 from PIL import Image
 import json
 import torch
 import os
+import numpy as np
+
+import torchvision.transforms as tfs
+import torchvision.transforms.functional as F
 
 from utils import traverse_obj
 
 import xmltodict
 
 
+class WhiteOutMask:
+    def __call__(self, mask):
+        mask_array = np.array(mask).mean(axis=2).astype(np.uint8)
+        binary_mask = mask_array > 0
+        binary_mask = binary_mask.astype(np.uint8)
+        binary_mask[binary_mask != 0] = 255
+        mask = np.stack((binary_mask, binary_mask, binary_mask), axis=2)
+        return F.to_pil_image(mask)
+
+
 class PascalVoc(Dataset):
     def __init__(self, root, split, transform=None):
         self.samples = []
         self.bndboxes = []
+        self.segmasks = []
         self.targets = []
         self.transform = transform
         self.classes = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow',
@@ -27,6 +41,7 @@ class PascalVoc(Dataset):
 
         image_dir = os.path.join(root, "JPEGImages")
         annotations_dir = os.path.join(root, "Annotations")
+        segmask_dir = os.path.join(root, "SegmentationClass")
         for file in files:
             with open(os.path.join(annotations_dir, f"{file}.xml")) as f:
                 annotations = xmltodict.parse(f.read())
@@ -41,7 +56,8 @@ class PascalVoc(Dataset):
 
             bnbbox = traverse_obj(objects, 'bndbox')
 
-            bbox = [int(bnbbox['xmin']), int(bnbbox['ymin']), int(bnbbox['xmax']) - int(bnbbox['xmin']), int(bnbbox['ymax']) - int(bnbbox['ymin'])]
+            bbox = [int(bnbbox['xmin']), int(bnbbox['ymin']), int(bnbbox['xmax']) - int(bnbbox['xmin']),
+                    int(bnbbox['ymax']) - int(bnbbox['ymin'])]
             # the last two fields are now width and height of the bounding box
 
             bbox = torch.tensor(bbox, dtype=torch.float32)
@@ -53,14 +69,21 @@ class PascalVoc(Dataset):
             sample_path = os.path.join(image_dir, f'{file}.jpg')
             self.samples.append(sample_path)
 
+            segmask_path = os.path.join(segmask_dir, f'{file}.png')
+            self.segmasks.append(segmask_path)
+
     def __len__(self):
         return len(self.samples)
 
     def __getitem__(self, idx):
         x = Image.open(self.samples[idx]).convert("RGB")
+        mask = Image.open(self.segmasks[idx]).convert("RGB")
+
+        mask = WhiteOutMask()(mask)
+
         bbox = self.bndboxes[idx]
         if self.transform:
-            x,bbox = self.transform(x,bbox)
+            return self.transform(x, bbox, mask), self.targets[idx]
         else:
-            x = transforms.ToTensor()(x)
-        return (x,bbox), self.targets[idx]
+            x = tfs.ToTensor()(x)
+        return (x, bbox, mask), self.targets[idx]
