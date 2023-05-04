@@ -9,6 +9,7 @@ import torch.nn.utils
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
+from torchinfo import summary
 
 import wandb
 from datasets.selection import select_dataset
@@ -16,7 +17,7 @@ from models.architecture import FeedForwardTower
 from utils import EarlyStopping, WBContext, ModelFileContext, get_args_names
 
 from arguments import OPTIMIZERS, LR_SCHEDULER, get_argument_instance
-
+from models.dev_architecture import get_dev_testing_architecture
 
 def train(model,
           optimizer,
@@ -170,8 +171,12 @@ def learn(dataset: str,
         network = FeedForwardTower(num_classes=num_classes, **model_config)
     elif model_base == 'resnet18':
         network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
+    elif model_base == 'dev_tower':
+        network = get_dev_testing_architecture()
     else:
         raise ValueError(f'Unknown base architecture {model_base}')
+
+    summary(network, input_size=(batch_size, 3, 224, 224))
 
     opti = get_argument_instance(OPTIMIZERS, optimizer, network.parameters(), lr=intern_learning_rate,
                                  weight_decay=weight_decay, momentum=momentum)
