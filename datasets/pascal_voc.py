@@ -83,7 +83,7 @@ class PascalVoc(Dataset):
 
         bbox = self.bndboxes[idx]
         if self.transform:
-            return self.transform(x, bbox, mask), self.targets[idx]
+            return self.transform((x, bbox, mask)), self.targets[idx]
         else:
             x = tfs.ToTensor()(x)
         return (x, bbox, mask), self.targets[idx]
