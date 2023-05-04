@@ -62,19 +62,6 @@ MORE_POOLS = [True, False, True, False, True, False, True, True]
 WIDER_FILTERS = [128, 512, 512, 512, 1024]
 DEEPER_FILTERS = [64, 64, 64, 128, 128, 256, 256, 512, 512, 512]
 
-
-class AxuiliaryClassifier(torch.nn.Module):
-
-    def __init__(self, in_channels, out_classes, activation, normalization):
-        super().__init__()
-        self.model = nn.Sequential(nn.AvgPool2d(kernel_size=5, stride=3),
-                                   ConvBlock(in_channels, 128, 1, 1, activation, normalization), nn.Flatten(),
-                                   nn.Linear(1152, 1024), nn.Linear(1024, 1000), nn.Softmax(dim=1))
-
-    def forward(self, x):
-        return self.model(x)
-
-
 class FeedForwardTower(torch.nn.Module):
     def __init__(self,
                  tower_type='normal',
@@ -158,12 +145,6 @@ class FeedForwardTower(torch.nn.Module):
             self.fc = nn.Linear(self.num_classes * 3 * 3,self.num_classes)
         self.pooling = nn.MaxPool2d(kernel_size=2)
 
-        # self.cell_blocks = nn.ModuleList([get_cell(f,f,cell_kernel) for f in filter_counts[1:]])
-
-        # if self.auxiliary_classifier:
-        #    self.layer_two_thirds = int(len(filter_counts) * (2/3)) -1
-        #    self.aux_cls = AxuiliaryClassifier(filter_counts[self.layer_two_thirds],num_classes,self.activation,'batchnorm')
-
         if self.cell_type in ['conv', 'rnn', 'gru']:
             self.get_x = lambda out: out
         elif self.cell_type in ['lstm', 'reciprocal']:
@@ -190,9 +171,5 @@ class FeedForwardTower(torch.nn.Module):
             x = self.fc(x)
 
         x = F.softmax(x, dim=1)
-
-        # if self.auxiliary_classifier:
-        #    aux_output = self.aux_cls(aux_input)
-        #    return x, aux_output
 
         return x

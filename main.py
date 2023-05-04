@@ -38,6 +38,8 @@ def train(model,
     do_wb = wandb.run is not None
     if not do_wb:
         print('Could not find wandb.run object')
+    else:
+        wandb.watch(model, log='all')
 
     if do_gradient_clipping:
         clip_value = 0.7
