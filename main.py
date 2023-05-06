@@ -40,8 +40,8 @@ def train(model,
     do_wb = wandb.run is not None
     if not do_wb:
         print('Could not find wandb.run object')
-    else:
-        wandb.watch(model, log='all')
+    #else:
+        #wandb.watch(model, log='all')
 
     if do_gradient_clipping:
         clip_value = 0.7
@@ -179,7 +179,7 @@ def learn(dataset: str,
     else:
         raise ValueError(f'Unknown base architecture {model_base}')
 
-    summary(network, input_size=(batch_size, 3, 224, 224))
+    #summary(network, input_size=(batch_size, 3, 224, 224))
 
     opti = get_argument_instance(OPTIMIZERS, optimizer, network.parameters(), lr=intern_learning_rate,
                                  weight_decay=weight_decay, momentum=momentum)
