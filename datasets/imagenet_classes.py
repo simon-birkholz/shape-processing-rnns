@@ -2,52 +2,78 @@ import os
 import re
 
 from nltk.corpus import wordnet as wn
+import numpy as np
 
 
-def get_pascal_voc_class_list():
-    return ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow',
-            'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train',
-            'tvmonitor']
-
-
-def get_imagenet_class_list(path):
+def get_pascal_voc_class_list(path):
     class_list = []
-    with open(os.path.join(path, "imagenet_class_list.txt")) as f:
+    with open(os.path.join(path, "pascalvoc_class_list.txt")) as f:
         for line in f:
-            _, label = line.split('\t')
+            label = line.split(' ')[1]
             class_list.append(label.strip())
 
     return class_list
 
-def get_imagenet_class_mapping():
-    imagenet_classes = get_imagenet_class_list('S:\\datasets\\pascal_voc')
-    pascal_voc_classes = get_pascal_voc_class_list()
 
-    resulting_mapping = dict()
+def get_imagenet_class_list(path):
+    class_list = []
+    with open(os.path.join(path, "imagenet_categories.txt")) as f:
+        for line in f:
+            id, label = line.split(' ')[0], ' '.join(line.split(' ')[1:])
+            class_list.append((id, label.strip()))
 
-    for c in pascal_voc_classes:
-        syns = wn.synsets(c)
-        for s in wn.synsets(c):
-            syns += s.hypernyms()
-            syns += s.hyponyms()
-        syns_name = [s.name().split('.')[0] for s in syns]
-        for ic in imagenet_classes:
-            for ss in syns_name:
-                if re.match(ss, ic):
-                    resulting_mapping[ic] = c
-                    break
-
-    print(f'Could match {len(resulting_mapping)} of {len(imagenet_classes)} classes. The following:')
-    for k,v in resulting_mapping.items():
-        print(f'{k}: {v}')
-
-    print(f'Could not match: ')
-    for ic in imagenet_classes:
-        if ic not in resulting_mapping.keys():
-            print(f'{ic}')
-    return resulting_mapping
+    return class_list
 
 
+# taken from https://github.com/cJarvers/shapebias/blob/main/src/helpers/imagenet_synsets.py
+
+TRANSLATE = {'diningtable': {'alias': 'dining_table', 'index': 0},
+             'pottedplant': {'alias': 'flowerpot', 'index': 0},
+             'tvmonitor': {'alias': 'television', 'index': 1},
+             'cow': {'alias': 'bovid', 'index': 0},
+             'aeroplane': {'alias': 'heavier-than-air_craft', 'index': 0},
+             'train': {'alias': 'locomotive', 'index': 0},
+             }
+
+
+def get_imagenet_class_mapping(path):
+    imagenet_classes = get_imagenet_class_list(path)
+    pascal_voc_classes = get_pascal_voc_class_list(path)
+
+    pascal_synsets = {}
+    for label in pascal_voc_classes:
+        if label in TRANSLATE.keys():
+            synset = wn.synsets(TRANSLATE[label]['alias'], pos='n')[TRANSLATE[label]['index']]
+        else:
+            synset = wn.synsets(label, pos='n')[0]
+        pascal_synsets[label] = synset
+
+    imagenet_synsets = [wn.synset_from_pos_and_offset('n', int(id[1:])) for id, label in imagenet_classes]
+
+    voc2imgnet = {c: [] for c in pascal_voc_classes}
+    imgnet2voc = {}
+    imagenet2voc = np.zeros(1000, dtype=np.int64)
+    for i, synset in enumerate(imagenet_synsets):
+        for vocclass, vocsynset in pascal_synsets.items():
+            if vocsynset in synset.lowest_common_hypernyms(vocsynset):
+                voc2imgnet[vocclass].append(i)
+                imgnet2voc[i] = vocclass
+                imagenet2voc[i] = pascal_voc_classes.index(vocclass) + 1
+
+    return voc2imgnet, imgnet2voc, imagenet2voc
 
 if __name__ == '__main__':
-    get_imagenet_class_mapping()
+    voc2imgnet, imgnet2voc, imagenet2voc = get_imagenet_class_mapping(r'S:\datasets\pascal_voc')
+
+    _, imgnet_class_list = zip(*get_imagenet_class_list(r'S:\datasets\pascal_voc'))
+
+    print(f'Could match {len(imgnet2voc)} of {len(imgnet_class_list)}. The following: ')
+    for k, v in imgnet2voc.items():
+        print(f'{k}:{imgnet_class_list[k]}: {v}')
+
+    print(f'Could not match: ')
+    for i in range(0,1000):
+        if i not in imgnet2voc.keys():
+            print(f'{i}:{imgnet_class_list[i]}')
+
+
