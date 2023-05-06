@@ -23,8 +23,8 @@ def convert_to_ffcv(write_path: str, ds: Dataset):
 
 
 def loader_ffcv_dataset(path: str, batch_size: int):
-    #decoder = RandomResizedCropRGBImageDecoder((224, 224))
-    decoder = SimpleRGBImageDecoder()
+    decoder = RandomResizedCropRGBImageDecoder((224, 224))
+    #decoder = SimpleRGBImageDecoder()
 
     device = torch.device('cuda')
 
