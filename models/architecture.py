@@ -118,6 +118,10 @@ class FeedForwardTower(torch.nn.Module):
             self.activation = F.relu
         elif activation == 'elu':
             self.activation = functools.partial(F.elu, alpha=1.0)
+        elif activation == 'tanh':
+            self.activation = F.tanh
+        elif activation == 'sigmoid':
+            self.activation = F.sigmoid
         else:
             raise ValueError('Unknown activation function')
 
