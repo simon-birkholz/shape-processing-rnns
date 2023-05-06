@@ -52,7 +52,7 @@ def train(model,
         do_early_stopping = True
         early_stopping = EarlyStopping(tolerance=5)
 
-    lr_scheduler = get_argument_instance(LR_SCHEDULER,lr_scheduler,optimizer)
+    lr_scheduler = get_argument_instance(LR_SCHEDULER,lr_scheduler,optimizer,is_optional=True)
 
     model.to(device)
     for epoch in range(start_epoch, epochs, 1):
