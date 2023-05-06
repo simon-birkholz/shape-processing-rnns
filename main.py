@@ -10,7 +10,6 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from tqdm import tqdm
-from torchinfo import summary
 
 import wandb
 from datasets.selection import select_dataset

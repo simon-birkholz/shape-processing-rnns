@@ -21,6 +21,7 @@ dependencies:
   - ipykernel=6.19.2
   - matplotlib=3.7.1
   - xmltodict=0.13.0
+  - torchinfo=1.7.2
   - pip:
       - tqdm==4.65.0
       - cupy-cuda11x==11.6.0
