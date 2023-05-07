@@ -23,10 +23,15 @@ def pairwise(iterable):
 
 class ConvBlock(nn.Module):
 
-    def __init__(self, in_channels, out_channels, kernel, stride, activation, normalization):
+    def __init__(self, in_channels: int,
+                 out_channels: int,
+                 kernel: KernelArg,
+                 stride: KernelArg,
+                 activation,
+                 normalization):
         super(ConvBlock, self).__init__()
-        self.conv = get_maybe_padded_conv(in_channels,out_channels,kernel,stride)
-        self.norm = get_maybe_normalization(normalization,out_channels)
+        self.conv = get_maybe_padded_conv(in_channels, out_channels, kernel, stride)
+        self.norm = get_maybe_normalization(normalization, out_channels)
         self.activation = activation
 
     def forward(self, x):
@@ -39,7 +44,12 @@ class ConvBlock(nn.Module):
 
 
 class ConvWrapper(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, kernel, stride, activation, normalization):
+    def __init__(self, in_channels: int,
+                 out_channels: int,
+                 kernel: KernelArg,
+                 stride: KernelArg,
+                 activation,
+                 normalization):
         super(ConvWrapper, self).__init__()
 
         self.conv = get_maybe_padded_conv(in_channels, out_channels, kernel, stride)
@@ -62,15 +72,16 @@ MORE_POOLS = [True, False, True, False, True, False, True, True]
 WIDER_FILTERS = [128, 512, 512, 512, 1024]
 DEEPER_FILTERS = [64, 64, 64, 128, 128, 256, 256, 512, 512, 512]
 
+
 class FeedForwardTower(torch.nn.Module):
     def __init__(self,
-                 tower_type='normal',
-                 cell_type='conv',
-                 activation='relu',
-                 num_classes=1000,
-                 cell_kernel=7,
-                 time_steps=1,
-                 normalization='batchnorm',
+                 tower_type: str = 'normal',
+                 cell_type: str = 'conv',
+                 activation: str = 'relu',
+                 num_classes: int = 1000,
+                 cell_kernel: KernelArg = 7,
+                 time_steps: int = 1,
+                 normalization: str = 'batchnorm',
                  **kwargs):
         super().__init__()
         for k, v in kwargs.items():

@@ -1,4 +1,4 @@
-from typing import Union, Sequence
+from typing import Union, Sequence, Tuple
 
 import torch
 import torch.nn as nn
@@ -8,10 +8,10 @@ import torch.jit as jit
 
 from .utils import _pair, calculate_output_dimension
 
-KernelArg = Union[int, Sequence[int]]
+KernelArg = Union[int, Tuple[int]]
 
 
-def get_maybe_padded_conv(in_channels: int, out_channels: int, kernel_size: KernelArg, stride: int):
+def get_maybe_padded_conv(in_channels: int, out_channels: int, kernel_size: KernelArg, stride: KernelArg):
     if stride > 1:
         return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
                          stride=stride)
@@ -20,7 +20,8 @@ def get_maybe_padded_conv(in_channels: int, out_channels: int, kernel_size: Kern
                          stride=stride,
                          padding='same')
 
-def get_maybe_normalization(normalization,channels):
+
+def get_maybe_normalization(normalization: str, channels: int):
     if normalization == 'batchnorm':
         return nn.BatchNorm2d(channels)
     elif normalization == 'layernorm':
@@ -34,7 +35,7 @@ class ConvRNNCell(torch.nn.Module):
                  in_channels: int,
                  out_channels: int,
                  kernel_size: KernelArg,
-                 stride,
+                 stride: KernelArg,
                  activation,
                  normalization,
                  bias: bool = True):
@@ -45,7 +46,7 @@ class ConvRNNCell(torch.nn.Module):
         self.kernel_size = kernel_size
         self.stride = stride
         self.activation = activation
-        self.norm = get_maybe_normalization(normalization,out_channels)
+        self.norm = get_maybe_normalization(normalization, out_channels)
         self.ndim = 2
 
         ntuple = _pair
@@ -96,7 +97,7 @@ class ConvGruCell(torch.nn.Module):
                  in_channels: int,
                  out_channels: int,
                  kernel_size: KernelArg,
-                 stride,
+                 stride: KernelArg,
                  activation,
                  normalization,
                  bias: bool = True):
@@ -107,7 +108,7 @@ class ConvGruCell(torch.nn.Module):
         self.stride = stride
         self.bias = bias
         self.activation = activation
-        self.norm = get_maybe_normalization(normalization,out_channels)
+        self.norm = get_maybe_normalization(normalization, out_channels)
 
         # reset gate
         self.wr = get_maybe_padded_conv(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
@@ -171,7 +172,7 @@ class ConvLSTMCell(torch.nn.Module):
                  in_channels: int,
                  out_channels: int,
                  kernel_size: KernelArg,
-                 stride,
+                 stride: KernelArg,
                  activation,
                  normalization,
                  bias: bool = True):
@@ -180,7 +181,7 @@ class ConvLSTMCell(torch.nn.Module):
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.stride = stride
-        self.norm = get_maybe_normalization(normalization,out_channels)
+        self.norm = get_maybe_normalization(normalization, out_channels)
         self.bias = bias
         self.activation = activation
 
@@ -263,7 +264,7 @@ class ReciprocalGatedCell(torch.nn.Module):
                  in_channels: int,
                  out_channels: int,
                  kernel_size: KernelArg,
-                 stride,
+                 stride: KernelArg,
                  activation,
                  normalization,
                  bias: bool = True):
@@ -274,7 +275,7 @@ class ReciprocalGatedCell(torch.nn.Module):
         self.activation = activation
         self.kernel_size = kernel_size
         self.stride = stride
-        self.norm = get_maybe_normalization(normalization,out_channels)
+        self.norm = get_maybe_normalization(normalization, out_channels)
 
         # employ a convolution before the reciprocal gated cell because the input gets gated by the hidden state, unlike all other cells
 
@@ -316,7 +317,7 @@ class ReciprocalGatedCell(torch.nn.Module):
         h_next = (1 - F.sigmoid(self.wch(c_cur))) * x + (1 - F.sigmoid(self.whh(h_cur))) * h_cur
         h_next = self.activation(h_next)
 
-        #h_next = F.tanh(h_next)
+        # h_next = F.tanh(h_next)
 
         # memory gating
         c_next = (1 - F.sigmoid(self.whc(h_cur))) * x + (1 - F.sigmoid(self.wcc(c_cur))) * c_cur
