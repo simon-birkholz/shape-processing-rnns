@@ -67,7 +67,7 @@ class PascalVoc(Dataset):
             self.bndboxes.append(bbox)
 
             target = self.classes.index(objects['name'])
-            self.targets.append(target)
+            self.targets.append(target+1) # Zero class means not in pascal voc
 
             sample_path = os.path.join(image_dir, f'{file}.jpg')
             self.samples.append(sample_path)

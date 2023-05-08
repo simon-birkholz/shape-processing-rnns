@@ -9,6 +9,7 @@ from .utils import _pair
 from models.cells import ConvRNNCell, ConvGruCell, ConvLSTMCell, ReciprocalGatedCell
 
 from models.cells import get_maybe_normalization, get_maybe_padded_conv
+from serrelabmodels.layers import fgru_cell, hgru_cell
 
 KernelArg = Union[int, Sequence[int]]
 import itertools
@@ -108,6 +109,12 @@ class FeedForwardTower(torch.nn.Module):
         elif self.cell_type == 'reciprocal':
             def get_cell(*args, **kwargs):
                 return ReciprocalGatedCell(*args, **kwargs)
+        elif self.cell_type == 'hgru':
+            def get_cell(*args,**kwargs):
+                return hgru_cell.hGRUCell(*args,**kwargs)
+        elif self.cell_type == 'fgru':
+            def get_cell(*args,**kwargs):
+                return fgru_cell.fGRUCell(*args,**kwargs)
         else:
             raise ValueError('Unknown ConvRNN cell type')
 
