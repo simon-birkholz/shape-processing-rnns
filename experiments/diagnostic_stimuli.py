@@ -156,7 +156,9 @@ tfs_frankenstein = tfs.Compose([MyCompose([
 
 
 def permutation_test(probs, labels, n=1000):
-    results = np.array([np.mean(np.random.permutation(probs) == labels) for _ in range(n)])
+    probs = probs.numpy()
+    labels = labels.numpy()
+    results = np.array([np.mean(np.random.permutation(probs) == labels, dtype=np.float32) for _ in range(n)])
     return results
 
 
@@ -173,8 +175,8 @@ def classify(model,
     model.eval()
     val_correct = 0
     val_examples = 0
-    all_voc_predicitions = torch.empty((0))
-    all_labels = torch.empty((0))
+    all_voc_predicitions = torch.empty((0), dtype=torch.int32)
+    all_labels = torch.empty((0), dtype=torch.int32)
     for batch in data_loader:
         inputs, targets = batch
         inputs = inputs.to(device)
@@ -184,7 +186,7 @@ def classify(model,
         probabilities = TF.softmax(outputs, dim=1)
         predicted = torch.argmax(probabilities, dim=1)
 
-        voc_predicted = torch.as_tensor([imagenet2voc[p] for p in predicted])
+        voc_predicted = torch.as_tensor([imagenet2voc[p] for p in predicted], dtype=torch.int32)
         voc_predicted = voc_predicted.to('cpu')
 
         all_voc_predicitions = torch.cat((all_voc_predicitions, voc_predicted), dim=0)
@@ -201,6 +203,8 @@ def classify(model,
 
     p_val = p_value(perm_distributions, val_accuracy)
     print(f'Got {p_val:.2f} as p-value on diagnostic stimuli')
+
+    return {'acc': val_accuracy, 'perm': perm_distributions, 'perm_acc': np.mean(perm_distributions), 'p-value': p_val}
 
 
 if __name__ == '__main__':
@@ -227,8 +231,20 @@ if __name__ == '__main__':
     # plot_16_images(shilouette_ds, 'Shilouette Images')
 
     # plot_16_images(frankenstein_ds, 'Frankenstein Images')
-
+    accs = {}
     for ds, ds_name in all_datasets:
         ds_loader = data.DataLoader(ds, batch_size=16)
         print(f'Now processing {ds_name} stimuli')
-        classify(model, ds_loader, imagenet2voc, device='cuda')
+        accs[ds_name] = classify(model, ds_loader, imagenet2voc, device='cuda')
+
+    acc_list = [accs[ds_name]['acc'] for _, ds_name in all_datasets]
+    rand_distributions = [accs[ds_name]['perm'] for _, ds_name in all_datasets]
+    _, ds_names = zip(*all_datasets)
+    x_pos = np.arange(len(all_datasets))
+    plt.bar(x_pos - 0.2, acc_list, width=0.4)
+    plt.violinplot(rand_distributions, positions=x_pos + 0.2, widths=0.4)
+
+    medians = [np.median(data) for data in rand_distributions]
+    plt.scatter(x_pos + 0.2, medians, marker='_',color='tab:blue')
+    plt.xticks(x_pos, ds_names)
+    plt.savefig('example-diagnostic-stimuli.png')

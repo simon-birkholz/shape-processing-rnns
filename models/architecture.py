@@ -80,7 +80,7 @@ class FeedForwardTower(torch.nn.Module):
                  cell_type: str = 'conv',
                  activation: str = 'relu',
                  num_classes: int = 1000,
-                 cell_kernel: KernelArg = 7,
+                 cell_kernel: KernelArg = 3,
                  time_steps: int = 1,
                  normalization: str = 'batchnorm',
                  **kwargs):

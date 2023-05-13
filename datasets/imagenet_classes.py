@@ -52,7 +52,7 @@ def get_imagenet_class_mapping(path):
 
     voc2imgnet = {c: [] for c in pascal_voc_classes}
     imgnet2voc = {}
-    imagenet2voc = np.zeros(1000, dtype=np.int64)
+    imagenet2voc = np.zeros(1000, dtype=np.int32)
     for i, synset in enumerate(imagenet_synsets):
         for vocclass, vocsynset in pascal_synsets.items():
             if vocsynset in synset.lowest_common_hypernyms(vocsynset):
