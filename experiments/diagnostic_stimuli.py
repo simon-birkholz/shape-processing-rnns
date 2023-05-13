@@ -93,19 +93,11 @@ def main(
 
     _, _, imagenet2voc = get_imagenet_class_mapping(dataset_path)
 
-    # plot_16_images(foreground_ds, 'Foreground Images')
-
     model = FeedForwardTower(tower_type='normal', cell_type=cell_type, cell_kernel=3, time_steps=3,
                              normalization='layernorm')
 
     state = torch.load(f'../bw_cluster_weights/{weights_file}')
     model.load_state_dict(state)
-
-    # plot_16_images(shilouette_ds, 'Shilouette Images')
-
-    # plot_16_images(frankenstein_ds, 'Frankenstein Images')
-
-    plot_16_images(serrated_ds, 'Serrated Images')
 
     accs = {}
     for ds, ds_name in keep_datasets:
