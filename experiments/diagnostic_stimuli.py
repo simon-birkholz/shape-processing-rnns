@@ -14,6 +14,8 @@ import numpy as np
 from datasets.imagenet_classes import get_imagenet_class_mapping
 from models.architecture import FeedForwardTower
 
+from scipy.ndimage import binary_dilation, gaussian_filter
+
 
 class FillOutMask:
     def __init__(self, inverted=False, fill=0):
@@ -92,6 +94,29 @@ class FrankensteinFlip:
         return F.to_pil_image(image_array)
 
 
+class SerratedDilation:
+    def __init__(self, borderwidth=5, sigma=2.0):
+        self.borderwidth = borderwidth
+        self.sigma = sigma
+
+    def __call__(self, image, bbox, mask):
+        image_array = np.average(np.array(image), axis=-1)
+        mask_array = np.average(np.array(mask), axis=-1)
+
+        x, y, w, h = bbox
+
+        dilated = binary_dilation(mask_array, iterations=self.borderwidth)
+
+        noise = np.random.randn(image_array.shape[0], image_array.shape[1])
+        noise = (gaussian_filter(noise, sigma=self.sigma) > 0.0) * 255
+
+        result = (255 - mask_array) * (1 - dilated) + dilated * noise
+        result = 255 - ((255 - image_array) + (255 - result))
+        result = result.astype(np.uint8)
+        result = np.stack((result,result,result), axis=2)
+        return F.to_pil_image(result), bbox, mask
+
+
 class MyCompose(object):
     def __init__(self, transforms):
         self.transforms = transforms
@@ -108,7 +133,7 @@ def plot_16_images(ds, title):
     columns = 4
     rows = 4
     for i in range(1, columns * rows + 1):
-        img = ds[i][0]
+        img = ds[i][0].movedim(0,-1)
         # bnd = ds[i][0][1]
         # rect = patches.Rectangle((bnd[0], bnd[1]), bnd[2], bnd[3], linewidth=1, edgecolor='r', facecolor='none')
         ax = fig.add_subplot(rows, columns, i)
@@ -117,7 +142,7 @@ def plot_16_images(ds, title):
         plt.axis('off')
 
     plt.title(title)
-    plt.show()
+    plt.savefig('example-images.png')
 
 
 tfs_normal = tfs.Compose([MyCompose([
@@ -152,6 +177,16 @@ tfs_frankenstein = tfs.Compose([MyCompose([
 ]),
     tfs.Resize((224, 224)),
     FrankensteinFlip(),
+    tfs.ToTensor()])
+
+tfs_serrated = tfs.Compose([MyCompose([
+    EnlargeImageAndMask(),
+    FillOutMask(inverted=True, fill=255),
+    FillOutMask(inverted=False, fill=0),
+    SerratedDilation(),
+    DiscardMaskAndBox()
+]),
+    tfs.Resize((224, 224)),
     tfs.ToTensor()])
 
 
@@ -212,15 +247,16 @@ if __name__ == '__main__':
     foreground_ds = PascalVoc('S:\datasets\pascal_voc', 'trainval', transform=tfs_foreground)
     shilouette_ds = PascalVoc('S:\datasets\pascal_voc', 'trainval', transform=tfs_shilouette)
     frankenstein_ds = PascalVoc('S:\datasets\pascal_voc', 'trainval', transform=tfs_frankenstein)
+    serrated_ds = PascalVoc('S:\datasets\pascal_voc', 'trainval', transform=tfs_serrated)
 
     all_datasets = [(normal_ds, 'normal'), (foreground_ds, 'foreground'), (shilouette_ds, 'shilouette'),
-                    (frankenstein_ds, 'frankenstein')]
+                    (frankenstein_ds, 'frankenstein'), (serrated_ds, 'serrated')]
 
     weights_file = 'rnn-layernorm-ts3.weights'
 
     _, _, imagenet2voc = get_imagenet_class_mapping(r'S:\datasets\pascal_voc')
 
-    # plot_16_images(foreground_ds, 'Foreground Images')
+    #plot_16_images(foreground_ds, 'Foreground Images')
 
     model = FeedForwardTower(tower_type='normal', cell_type='rnn', cell_kernel=3, time_steps=3,
                              normalization='layernorm')
@@ -228,9 +264,12 @@ if __name__ == '__main__':
     state = torch.load(f'../bw_cluster_weights/{weights_file}')
     model.load_state_dict(state)
 
-    # plot_16_images(shilouette_ds, 'Shilouette Images')
+    #plot_16_images(shilouette_ds, 'Shilouette Images')
 
-    # plot_16_images(frankenstein_ds, 'Frankenstein Images')
+    #plot_16_images(frankenstein_ds, 'Frankenstein Images')
+
+    plot_16_images(serrated_ds, 'Serrated Images')
+
     accs = {}
     for ds, ds_name in all_datasets:
         ds_loader = data.DataLoader(ds, batch_size=16)
@@ -245,6 +284,6 @@ if __name__ == '__main__':
     plt.violinplot(rand_distributions, positions=x_pos + 0.2, widths=0.4)
 
     medians = [np.median(data) for data in rand_distributions]
-    plt.scatter(x_pos + 0.2, medians, marker='_',color='tab:blue')
+    plt.scatter(x_pos + 0.2, medians, marker='_', color='tab:blue')
     plt.xticks(x_pos, ds_names)
     plt.savefig('example-diagnostic-stimuli.png')
