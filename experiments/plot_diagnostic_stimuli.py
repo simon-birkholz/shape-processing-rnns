@@ -11,6 +11,14 @@ def main(filename: str,
          out_file: str,
          fdr: float,
          show: bool = False):
+
+    plt.rcParams.update({
+        'font.size': 15,
+        'figure.figsize': (8, 5),
+        'axes.spines.right': False,
+        'axes.spines.top': False
+    })
+
     # Load RSA results
     saved_state = torch.load(filename)
     accs = saved_state['accuracy']
