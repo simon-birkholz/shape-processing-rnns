@@ -10,7 +10,7 @@ import argparse
 def main(filename: str,
          out_file: str,
          fdr: float,
-         show: bool = False,):
+         show: bool = False):
     # Load RSA results
     saved_state = torch.load(filename)
     comparisons = saved_state["comparisons"]

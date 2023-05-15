@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 import torch.utils.data as data
 
-import matplotlib.pyplot as plt
+import datetime
 
 import numpy as np
 import argparse
@@ -16,7 +16,6 @@ from datasets.imagenet_classes import get_imagenet_class_mapping
 from models.architecture import FeedForwardTower
 
 from ds_transforms import NORMAL, FOREGROUND, SHILOUETTE, FRANKENSTEIN, SERRATED
-from fdr import fdrcorrection
 
 
 def permutation_test(probs, labels, n=1000):
@@ -63,7 +62,8 @@ def classify(model,
 
     p_val = p_value(perm_distributions, val_accuracy)
 
-    print(f"     ... {val_accuracy:.2f} accuracy, {np.mean(perm_distributions):.2f} mean permutation accuracy, {p_val:.2f} as p-value")
+    print(
+        f"     ... {val_accuracy:.2f} accuracy, {np.mean(perm_distributions):.2f} mean permutation accuracy, {p_val:.2f} as p-value")
 
     return {'acc': val_accuracy, 'perm': perm_distributions, 'perm_acc': np.mean(perm_distributions), 'p-value': p_val}
 
@@ -73,10 +73,11 @@ def main(
         dataset_path: str,
         set: str,
         cell_type: str,
+        cell_kernel: int,
+        time_steps: int,
         weights_file: str,
-        out_file: str,
         batch_size: int,
-        fdr: int
+        normalization: str
 ):
     normal_ds = PascalVoc(dataset_path, set, transform=NORMAL)
     foreground_ds = PascalVoc(dataset_path, set, transform=FOREGROUND)
@@ -91,8 +92,8 @@ def main(
 
     _, _, imagenet2voc = get_imagenet_class_mapping(dataset_path)
 
-    model = FeedForwardTower(tower_type='normal', cell_type=cell_type, cell_kernel=3, time_steps=3,
-                             normalization='layernorm')
+    model = FeedForwardTower(tower_type='normal', cell_type=cell_type, cell_kernel=cell_kernel, time_steps=time_steps,
+                             normalization=normalization)
 
     state = torch.load(f'../bw_cluster_weights/{weights_file}')
     model.load_state_dict(state)
@@ -100,22 +101,12 @@ def main(
     accs = {}
     for ds, ds_name in all_datasets:
         ds_loader = data.DataLoader(ds, batch_size=batch_size)
-        print(f'Now processing {ds_name} stimuli')
+        print(f'Processing {ds_name} stimuli...')
         accs[ds_name] = classify(model, ds_loader, imagenet2voc, device='cuda')
 
-    plt.figure()
-    acc_list = np.array([accs[ds_name]['acc'] for _, ds_name in all_datasets])
-    pvals = np.array([accs[ds_name]['p-value'] for _, ds_name in all_datasets])
-    significant = fdrcorrection(pvals, Q=fdr)
-
-    rand_distributions = [accs[ds_name]['perm'] for _, ds_name in all_datasets]
-    _, ds_names = zip(*all_datasets)
-    x_pos = np.arange(len(all_datasets))
-    plt.bar(x_pos - 0.2, acc_list, width=0.4)
-    plt.violinplot(rand_distributions, positions=x_pos + 0.2, widths=0.4, showmeans=True)
-    plt.scatter(x_pos[significant] - 0.2, acc_list[significant] + 0.05, marker="*", c="black")
-    plt.xticks(x_pos, ds_names)
-    plt.savefig(out_file)
+    return {
+        "accuracy": accs
+    }
 
 
 if __name__ == '__main__':
@@ -124,11 +115,22 @@ if __name__ == '__main__':
                         nargs='+')
     parser.add_argument('--path', type=str, required=True, help='Path to PascalVOC dataset')
     parser.add_argument('--cell_type', type=str, default='conv', help='Type of (Recurrent) cell to evaluate')
+    parser.add_argument('--cell_kernel', type=str, default=3, help='Sizes of cell kernels')
+    parser.add_argument('--time_steps', type=str, default=3,
+                        help='Amount of timesteps to unroll (for conv defaults to 1)')
     parser.add_argument('--weights', type=str, required=True, help='Path to model weights')
-    parser.add_argument('--out', type=str, help='name for the saved diagram', default='output-diagram.png')
+    parser.add_argument('--out', type=str, help='name for the saved diagram', default='test-run')
     parser.add_argument('--set', type=str, default='trainval', help='PascalVOC image set to use (e.g. train)')
+    parser.add_argument('--norm', type=str, default='layernorm', help='Normalization to use')
     parser.add_argument('-b', '--batchsize', type=int, default=16)
-    parser.add_argument("--fdr", type=float, default=0.05, help="Value at which to control false discovery rate.")
     args = parser.parse_args()
 
-    main(args.datasets, args.path, args.set, args.cell_type, args.weights, args.out, args.batchsize, args.fdr)
+    save_data = main(args.datasets, args.path, args.set, args.cell_type, args.cell_kernel, args.time_steps,
+                     args.weights, args.batchsize, args.norm)
+
+    save_data['commandline'] = args
+
+    time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")
+    out_file = f"../results/stimuli/{time}_stimuli_{args.out}.pt"
+    torch.save(save_data, out_file)
+    print(f"Written data to {out_file}")
