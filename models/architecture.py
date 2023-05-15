@@ -22,6 +22,26 @@ def pairwise(iterable):
     return zip(a, b)
 
 
+class SpatialDropout(nn.Module):
+
+    def __init__(self, p: float = 0.5) -> None:
+        super().__init__()
+        if p < 0 or p > 1:
+            raise ValueError("dropout probability has to be between 0 and 1, "
+                             "but got {}".format(p))
+        self.dropout = nn.Dropout2d(p=p)  # internally use the normal dropout2d layer
+
+    def forward(self, x, mask=None):
+        if mask is None:
+            mask = torch.ones(*x.shape)
+            mask = mask.to(x.get_device())
+            mask = self.dropout(mask)
+
+        x = mask * x
+        return x, mask
+    # When no mask supplied generate a new one
+
+
 class ConvBlock(nn.Module):
 
     def __init__(self, in_channels: int,
@@ -162,7 +182,7 @@ class FeedForwardTower(torch.nn.Module):
 
         self.pooling = nn.MaxPool2d(kernel_size=2)
 
-        self.dropout = nn.Dropout2d(p=dropout)
+        self.dropout = SpatialDropout(p=dropout)
 
         if self.cell_type in ['conv', 'rnn', 'gru']:
             self.get_x = lambda out: out
@@ -185,6 +205,7 @@ class FeedForwardTower(torch.nn.Module):
 
         x = input
         hidden = [None] * len(self.cell_blocks)
+        dropout_mask = None
         for t in range(0, time_steps):
             x = input
             for i in range(len(self.cell_blocks)):
@@ -196,7 +217,7 @@ class FeedForwardTower(torch.nn.Module):
                 if self.do_pooling[i]:
                     x = self.pooling(x)
 
-        x = self.dropout(x)
+        x, dropout_mask = self.dropout(x, dropout_mask)
         x = self.last_conv(x)
         x = self.flatten(x)
 
