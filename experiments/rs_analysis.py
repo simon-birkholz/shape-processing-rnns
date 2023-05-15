@@ -6,9 +6,7 @@ import torch.nn.functional as F
 import torch.utils.data as data
 
 import rsatoolbox
-import matplotlib as mpl
 import matplotlib.pyplot as plt
-
 
 import numpy as np
 import argparse
@@ -19,19 +17,10 @@ from datasets.imagenet_classes import get_imagenet_class_mapping
 from models.architecture import FeedForwardTower
 
 from ds_transforms import NORMAL, FOREGROUND, SHILOUETTE, FRANKENSTEIN, SERRATED
-from fdr import fdrcorrection
 
+import datetime
 
-def permutation_test(probs, labels, n=1000):
-    probs = probs.numpy()
-    labels = labels.numpy()
-    results = np.array([np.mean(np.random.permutation(probs) == labels, dtype=np.float32) for _ in range(n)])
-    return results
-
-
-def p_value(random_dist, model_acc):
-    return ((random_dist >= model_acc).sum() + 1) / len(random_dist)
-
+torch.set_grad_enabled(False)
 
 def get_activations(model,
                     data_loader,
@@ -75,12 +64,9 @@ def main(
         set: str,
         cell_type: str,
         weights_file: str,
-        out_file: str,
         batch_size: int,
-        fdr: int,
         method: str,
-        show_rdms: bool = False,
-        show_rsa: bool = False
+        show_rdms: bool = False
 ):
     normal_ds = PascalVoc(dataset_path, set, transform=NORMAL)
     foreground_ds = PascalVoc(dataset_path, set, transform=FOREGROUND)
@@ -109,9 +95,10 @@ def main(
 
     activations = {}
     classes = None
+    print("Capturing activations ...")
     for ds, ds_name in all_datasets_full:
         ds_loader = data.DataLoader(ds, batch_size=batch_size)
-        print(f'Now capturing {ds_name} activations')
+        print(f"     ... {ds_name} stimuli")
         classes, ac = get_activations(model, ds_loader, layer_names, device='cuda')
         activations[ds_name] = ac
 
@@ -162,7 +149,7 @@ def main(
         method = 'rho-a'
         method_string = r'rank-correlation $(\rho_a)$'
         eval_fun = lambda models, data: rsatoolbox.inference.eval_bootstrap_pattern(
-            models=models, data=data, method=method
+            models=models, data=data, method=method, pattern_descriptor='classes'
         )
     elif method == 'weighted':
         models = {
@@ -174,7 +161,8 @@ def main(
         method = 'corr'
         method_string = r'linear correlation $(r)$'
         eval_fun = lambda models, data: rsatoolbox.inference.bootstrap_crossval(
-            models=models, data=data, method=method, fitter=fitter, k_rdm=1, boot_type="pattern"
+            models=models, data=data, method=method, fitter=fitter, k_rdm=1, boot_type="pattern",
+            pattern_descriptor='classes'
         )
     else:
         raise ValueError(f'Unknown method {method}')
@@ -184,31 +172,9 @@ def main(
     for layer in comparison_layers:
         comparisons[layer] = eval_fun(models[layer], rdms['normal'][layer])
 
-    # Plot all comparison results in custom bar plot
-    xs = np.array(
-        [i * (len(all_datasets)) + j + 1 for i in range(len(comparison_layers)) for j in range(len(args.comparisons))])
-    xticks = [i * len(all_datasets) + 0.5 + len(args.comparisons) / 2 for i in range(len(comparison_layers))]
-    heights = np.concatenate([comparisons[layer].get_means() for layer in comparison_layers])
-    lower_error = heights - np.concatenate(
-        [comparisons[layer].get_ci(0.95, test_type="bootstrap")[0] for layer in comparison_layers])
-    upper_error = np.concatenate(
-        [comparisons[layer].get_ci(0.95, test_type="bootstrap")[1] for layer in comparison_layers]) - heights
-    pvals = np.concatenate([c.test_zero(test_type="bootstrap") for c in comparisons.values()])
-    significant = fdrcorrection(pvals, Q=fdr)  # control FDR
-    colorseq = [mpl.colors.to_rgb(mpl.colors.TABLEAU_COLORS[k]) for k in mpl.colors.TABLEAU_COLORS]
-    colors = [colorseq[i] for _ in range(len(comparisons.keys())) for i in range(len(args.comparisons))]
-    legend = [mpl.patches.Patch(color=colorseq[i], label=dset) for i, dset in enumerate(args.comparisons)]
-    plt.bar(x=xs, height=heights, yerr=[lower_error, upper_error], color=colors)
-    plt.scatter(x=xs[significant], y=heights[significant] + 0.1, marker="*", color="black")
-    plt.xticks(xticks, labels=comparison_layers)
-    plt.ylim(top=1.0, bottom=-0.25)
-    plt.legend(handles=legend, loc="upper left")
-    plt.ylabel(method_string)
-    plt.tight_layout()
-    # save figure to file
-    plt.savefig(out_file)
-    if show_rsa:
-        plt.show()
+    return {
+        "comparisons": comparisons
+    }
 
 
 if __name__ == '__main__':
@@ -218,18 +184,22 @@ if __name__ == '__main__':
     parser.add_argument('--path', type=str, required=True, help='Path to PascalVOC dataset')
     parser.add_argument('--cell_type', type=str, default='conv', help='Type of (Recurrent) cell to evaluate')
     parser.add_argument('--weights', type=str, required=True, help='Path to model weights')
-    parser.add_argument('--out', type=str, help='name for the saved diagram', default='output-diagram.png')
+    parser.add_argument('--out', type=str, help='name for the saved data', default='test-run')
     parser.add_argument('--set', type=str, default='trainval', help='PascalVOC image set to use (e.g. train)')
     parser.add_argument('-b', '--batchsize', type=int, default=16)
     parser.add_argument("--method", type=str, default="fixed",
                         help="How to compare RDMs. Can be 'fixed' (no weighting, use rho-a) or 'weighted' (weighted models, use corr).")
     parser.add_argument("--show_rdms", action="store_true",
                         help="If true, shows plot of RDMs (and pauses script halfway).")
-    parser.add_argument("--show_rsa", action="store_true", help="If true, shows plot of RSA (and pauses script).")
-
-    parser.add_argument("--fdr", type=float, default=0.05, help="Value at which to control false discovery rate.")
     args = parser.parse_args()
 
-    main(args.datasets, args.path, args.set, args.cell_type, args.weights, args.out, args.batchsize, args.fdr,
-         args.method,
-         show_rdms=args.show_rdms, show_rsa=args.show_rsa)
+    save_data = main(args.datasets, args.path, args.set, args.cell_type, args.weights, args.batchsize,
+                     args.method,
+                     show_rdms=args.show_rdms)
+
+    save_data['commandline'] = args
+
+    time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")
+    out_file = f"../results/rsa/{time}_rsa_{args.out}_{args.method}.pt"
+    torch.save(save_data, out_file)
+    print(f"Written data to {out_file}")

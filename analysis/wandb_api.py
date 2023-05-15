@@ -4,12 +4,18 @@ import matplotlib.pyplot as plt
 from typing import List, Tuple, Dict
 import json
 import re
+import collections.abc as abc
 
-from utils import traverse_obj
 api = None
 project = None
 
-
+def traverse_obj(obj, *keys):
+    for k in keys:
+        if isinstance(obj, abc.Mapping) and k in obj.keys():
+            obj = obj[k]
+        else:
+            return None
+    return obj
 def to_dict(config_str: str):
     return json.loads(config_str)
 
