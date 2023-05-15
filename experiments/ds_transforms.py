@@ -105,6 +105,8 @@ class SerratedDilation:
 
         dilated = binary_dilation(mask_array, iterations=self.borderwidth)
 
+        # Taken from https://github.com/cJarvers/shapebias/blob/main/src/mappings.py
+
         noise = np.random.randn(image_array.shape[0], image_array.shape[1])
         noise = (gaussian_filter(noise, sigma=self.sigma) > 0.0) * 255
 

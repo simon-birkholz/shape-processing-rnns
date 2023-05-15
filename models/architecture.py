@@ -110,11 +110,11 @@ class FeedForwardTower(torch.nn.Module):
             def get_cell(*args, **kwargs):
                 return ReciprocalGatedCell(*args, **kwargs)
         elif self.cell_type == 'hgru':
-            def get_cell(*args,**kwargs):
-                return hgru_cell.hGRUCell(*args,**kwargs)
+            def get_cell(*args, **kwargs):
+                return hgru_cell.hGRUCell(*args, **kwargs)
         elif self.cell_type == 'fgru':
-            def get_cell(*args,**kwargs):
-                return fgru_cell.fGRUCell(*args,**kwargs)
+            def get_cell(*args, **kwargs):
+                return fgru_cell.fGRUCell(*args, **kwargs)
         else:
             raise ValueError('Unknown ConvRNN cell type')
 
@@ -174,10 +174,15 @@ class FeedForwardTower(torch.nn.Module):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
 
-    def forward(self, input):
+    def forward(self, input,
+                return_hidden=False,
+                time_steps=-1):
+        if time_steps == -1:
+            time_steps = self.time_steps
+
         x = input
         hidden = [None] * len(self.cell_blocks)
-        for t in range(0, self.time_steps):
+        for t in range(0, time_steps):
             x = input
             for i in range(len(self.cell_blocks)):
                 # x = self.conv_blocks[i](x)
@@ -190,5 +195,8 @@ class FeedForwardTower(torch.nn.Module):
 
         x = self.last_conv(x)
         x = self.flatten(x)
+
+        if return_hidden:
+            return x, hidden
 
         return x

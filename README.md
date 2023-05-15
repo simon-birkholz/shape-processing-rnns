@@ -27,3 +27,9 @@ Additional Parameters could be:
 ## Experiments and Evaluation
 
 For the analysis on diagnostic stimuli and the representational similarity analysis see `experiments`.
+
+
+## Acknowledgements
+
+This repo reuses code from:
+- https://github.com/cJarvers/shapebias

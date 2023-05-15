@@ -16,7 +16,7 @@ from datasets.imagenet_classes import get_imagenet_class_mapping
 from models.architecture import FeedForwardTower
 
 from ds_transforms import NORMAL, FOREGROUND, SHILOUETTE, FRANKENSTEIN, SERRATED
-
+from fdr import fdrcorrection
 
 
 def permutation_test(probs, labels, n=1000):
@@ -59,14 +59,11 @@ def classify(model,
         val_examples += predicted.shape[0]
 
     val_accuracy = (val_correct / val_examples)
-    print(f'Got {val_accuracy:.2f} accuracy on diagnostic stimuli')
-
     perm_distributions = permutation_test(all_voc_predicitions, all_labels)
 
-    print(f'Got {np.mean(perm_distributions):.2f} mean permutation accuracy on diagnostic stimuli')
-
     p_val = p_value(perm_distributions, val_accuracy)
-    print(f'Got {p_val:.2f} as p-value on diagnostic stimuli')
+
+    print(f"     ... {val_accuracy:.2f} accuracy, {np.mean(perm_distributions):.2f} mean permutation accuracy, {p_val:.2f} as p-value")
 
     return {'acc': val_accuracy, 'perm': perm_distributions, 'perm_acc': np.mean(perm_distributions), 'p-value': p_val}
 
@@ -78,7 +75,8 @@ def main(
         cell_type: str,
         weights_file: str,
         out_file: str,
-        batch_size: int
+        batch_size: int,
+        fdr: int
 ):
     normal_ds = PascalVoc(dataset_path, set, transform=NORMAL)
     foreground_ds = PascalVoc(dataset_path, set, transform=FOREGROUND)
@@ -89,7 +87,7 @@ def main(
     all_datasets = [(normal_ds, 'normal'), (foreground_ds, 'foreground'), (shilouette_ds, 'shilouette'),
                     (frankenstein_ds, 'frankenstein'), (serrated_ds, 'serrated')]
 
-    keep_datasets = [(ds, ds_name) for ds, ds_name in all_datasets if ds_name in datasets]
+    all_datasets = [(ds, ds_name) for ds, ds_name in all_datasets if ds_name in datasets]
 
     _, _, imagenet2voc = get_imagenet_class_mapping(dataset_path)
 
@@ -100,21 +98,22 @@ def main(
     model.load_state_dict(state)
 
     accs = {}
-    for ds, ds_name in keep_datasets:
+    for ds, ds_name in all_datasets:
         ds_loader = data.DataLoader(ds, batch_size=batch_size)
         print(f'Now processing {ds_name} stimuli')
         accs[ds_name] = classify(model, ds_loader, imagenet2voc, device='cuda')
 
     plt.figure()
-    acc_list = [accs[ds_name]['acc'] for _, ds_name in all_datasets]
+    acc_list = np.array([accs[ds_name]['acc'] for _, ds_name in all_datasets])
+    pvals = np.array([accs[ds_name]['p-value'] for _, ds_name in all_datasets])
+    significant = fdrcorrection(pvals, Q=fdr)
+
     rand_distributions = [accs[ds_name]['perm'] for _, ds_name in all_datasets]
     _, ds_names = zip(*all_datasets)
     x_pos = np.arange(len(all_datasets))
     plt.bar(x_pos - 0.2, acc_list, width=0.4)
-    plt.violinplot(rand_distributions, positions=x_pos + 0.2, widths=0.4)
-
-    medians = [np.median(data) for data in rand_distributions]
-    plt.scatter(x_pos + 0.2, medians, marker='_', color='tab:blue')
+    plt.violinplot(rand_distributions, positions=x_pos + 0.2, widths=0.4, showmeans=True)
+    plt.scatter(x_pos[significant] - 0.2, acc_list[significant] + 0.05, marker="*", c="black")
     plt.xticks(x_pos, ds_names)
     plt.savefig(out_file)
 
@@ -129,7 +128,7 @@ if __name__ == '__main__':
     parser.add_argument('--out', type=str, help='name for the saved diagram', default='output-diagram.png')
     parser.add_argument('--set', type=str, default='trainval', help='PascalVOC image set to use (e.g. train)')
     parser.add_argument('-b', '--batchsize', type=int, default=16)
-
+    parser.add_argument("--fdr", type=float, default=0.05, help="Value at which to control false discovery rate.")
     args = parser.parse_args()
 
-    main(args.datasets, args.path, args.set, args.cell_type, args.weights, args.out, args.batchsize)
+    main(args.datasets, args.path, args.set, args.cell_type, args.weights, args.out, args.batchsize, args.fdr)
