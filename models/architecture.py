@@ -83,6 +83,7 @@ class FeedForwardTower(torch.nn.Module):
                  cell_kernel: KernelArg = 3,
                  time_steps: int = 1,
                  normalization: str = 'batchnorm',
+                 dropout: float = 0.0,
                  **kwargs):
         super().__init__()
         for k, v in kwargs.items():
@@ -161,6 +162,8 @@ class FeedForwardTower(torch.nn.Module):
 
         self.pooling = nn.MaxPool2d(kernel_size=2)
 
+        self.dropout = nn.Dropout2d(p=dropout)
+
         if self.cell_type in ['conv', 'rnn', 'gru']:
             self.get_x = lambda out: out
         elif self.cell_type in ['lstm', 'reciprocal']:
@@ -193,6 +196,7 @@ class FeedForwardTower(torch.nn.Module):
                 if self.do_pooling[i]:
                     x = self.pooling(x)
 
+        x = self.dropout(x)
         x = self.last_conv(x)
         x = self.flatten(x)
 
