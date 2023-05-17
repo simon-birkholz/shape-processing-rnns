@@ -30,6 +30,7 @@ def train(model,
           do_gradient_clipping: bool = False,
           batch_frag: int = 1,
           lr_scheduler: str = None,
+          lr_step: int = None,
           save_cb=None,
           start_epoch: int = 0,
           device: str = 'cpu'):
@@ -51,7 +52,7 @@ def train(model,
         do_early_stopping = True
         early_stopping = EarlyStopping(tolerance=3)
 
-    lr_scheduler = get_argument_instance(LR_SCHEDULER,lr_scheduler,optimizer,is_optional=True)
+    lr_scheduler = get_argument_instance(LR_SCHEDULER,lr_scheduler,optimizer,is_optional=True, step_size=lr_step)
 
     model.to(device)
     for epoch in range(start_epoch, epochs, 1):

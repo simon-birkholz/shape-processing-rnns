@@ -48,7 +48,7 @@ def get_argument_instance(arguments, key, *args, is_optional=False, **kwargs):
     if key and key in arguments.keys():
         args = list(args)
         arg_instance = arguments[key]
-        needed_kwargs = {k: v for k, v in kwargs.items() if k in arg_instance['args']}
+        needed_kwargs = {k: v for k, v in kwargs.items() if k in arg_instance['args'] and v is not None}
         default_args = {k: v for k, v in arg_instance['args'].items() if v is not None}
         tt_args = default_args | needed_kwargs
         result = arg_instance['fn'](*args, **tt_args)
