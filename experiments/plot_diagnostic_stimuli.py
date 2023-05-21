@@ -35,7 +35,7 @@ def main(filename: str,
     plt.violinplot(rand_distributions, positions=x_pos + 0.2, widths=0.4, showmeans=True)
     plt.scatter(x_pos[significant] - 0.2, acc_list[significant] + 0.05, marker="*", c="black")
     plt.xticks(x_pos, args.datasets)
-    plt.savefig(out_file)
+    plt.savefig('../figures/' + out_file)
 
 
 if __name__ == '__main__':

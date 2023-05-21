@@ -37,12 +37,10 @@ class ConvRNNCell(torch.nn.Module):
                  kernel_size: KernelArg,
                  stride: KernelArg,
                  activation,
-                 normalization,
-                 bias: bool = True):
+                 normalization):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.bias = bias
         self.kernel_size = kernel_size
         self.stride = stride
         self.activation = activation
@@ -61,7 +59,6 @@ class ConvRNNCell(torch.nn.Module):
         # 3. Two convolution and then elementwise addition
         # In our formulas option 3 is used for all gates
 
-        # todo padding und bias
         self.x2h = get_maybe_padded_conv(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
                                          stride=stride)
 
@@ -99,14 +96,12 @@ class ConvGruCell(torch.nn.Module):
                  kernel_size: KernelArg,
                  stride: KernelArg,
                  activation,
-                 normalization,
-                 bias: bool = True):
+                 normalization):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.stride = stride
-        self.bias = bias
         self.activation = activation
         self.norm = get_maybe_normalization(normalization, out_channels)
 
@@ -174,15 +169,13 @@ class ConvLSTMCell(torch.nn.Module):
                  kernel_size: KernelArg,
                  stride: KernelArg,
                  activation,
-                 normalization,
-                 bias: bool = True):
+                 normalization):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.stride = stride
         self.norm = get_maybe_normalization(normalization, out_channels)
-        self.bias = bias
         self.activation = activation
 
         # reset/forget gate
@@ -267,14 +260,17 @@ class ReciprocalGatedCell(torch.nn.Module):
                  stride: KernelArg,
                  activation,
                  normalization,
-                 bias: bool = True):
+                 do_preconv: bool = True):
         super().__init__()
+        if not do_preconv and stride != 1:
+            raise AttributeError(
+                'A strided convolution needs an additional convolution in the reciprocal gated cell design')
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.bias = bias
         self.activation = activation
         self.kernel_size = kernel_size
         self.stride = stride
+        self.do_preconv = do_preconv
         self.norm = get_maybe_normalization(normalization, out_channels)
 
         # employ a convolution before the reciprocal gated cell because the input gets gated by the hidden state, unlike all other cells
@@ -310,7 +306,6 @@ class ReciprocalGatedCell(torch.nn.Module):
         else:
             h_cur, c_cur = hidden_state
 
-        # TODO support different activation functions
         x = self.preconv(input)
 
         # output gating

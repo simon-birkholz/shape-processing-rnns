@@ -52,7 +52,7 @@ def main(filename: str,
     plt.ylabel('Methods')
     plt.tight_layout()
     # save figure to file
-    plt.savefig(out_file)
+    plt.savefig('../figures/' + out_file)
     if show:
         plt.show()
 
