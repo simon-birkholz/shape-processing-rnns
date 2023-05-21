@@ -5,7 +5,15 @@ WS_DATASET=$(ws_find cv_datasets)
 
 echo $WS_DATASET
 
-source ~/anaconda3/etc/profile.d/conda.sh
+#mkdir -p $TMP/anaconda3
+cp -r ~/anaconda3 $TMP
+
+#rsync -avhz ~/anaconda3 $TMP
+
+#tar cf - ~/anaconda3 | (cd $TMP; tar xf -)
+
+source $TMP/anaconda3/etc/profile.d/conda.sh
+#source ~/anaconda3/etc/profile.d/conda.sh
 conda activate shape-processing-rnns
 
 echo "Copying datasets"

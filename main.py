@@ -50,7 +50,7 @@ def train(model,
     if epochs == 'early-stop':
         epochs = 400
         do_early_stopping = True
-        early_stopping = EarlyStopping(tolerance=3)
+        early_stopping = EarlyStopping(tolerance=4)
 
     lr_scheduler = get_argument_instance(LR_SCHEDULER,lr_scheduler,optimizer,is_optional=True, step_size=lr_step)
 
