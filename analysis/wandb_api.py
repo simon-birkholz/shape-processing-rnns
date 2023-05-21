@@ -79,17 +79,21 @@ def plot_runs_attr(runs,
                    max_val=1.0,
                    min_val=0.0,
                    show_top=1.0):
+
     sorted_runs = sorted(runs, key=default_sort, reverse=True)
     keep_runs = sorted_runs[:int(len(sorted_runs) * show_top)]
     keep_data = [(run, history) for run in keep_runs if len(history := run.history()) > 0]
 
+    end_values = []
     for run, history in keep_data:
         history.plot(x='_step', y=attr[0], kind='line', ax=ax)
+        end_values.append(history[attr[0]].iloc[-1])
 
     ax.set_xlabel('Epochs')
     ax.set_ylabel(attr[1])
     ax.set_ylim([min_val, max_val])
-    legend_labels = [run_to_label(r, label_attr) for r, _ in keep_data]
+    legend_labels = [run_to_label(r, label_attr) + f' ({e:.3f})' for (r, _), e in zip(keep_data, end_values)]
+
     ax.legend(legend_labels)
 
 
@@ -107,6 +111,11 @@ def plot_runs_accuracy(runs, title, label_attr='learning_rate', show_top=1.0):
     sorted_runs = sorted(runs, key=default_sort, reverse=True)
     keep_runs = sorted_runs[:int(len(sorted_runs) * show_top)]
 
+    plt.rcParams.update({
+        'axes.spines.right': False,
+        'axes.spines.top': False
+    })
+
     fig, (ax1, ax2) = plt.subplots(1, 2)
     fig.set_figwidth(20)
     fig.suptitle(title)
@@ -123,6 +132,11 @@ def plot_runs_accuracy(runs, title, label_attr='learning_rate', show_top=1.0):
 def plot_runs_loss(runs, title, label_attr='learning_rate', show_top=1.0):
     sorted_runs = sorted(runs, key=default_sort, reverse=True)
     keep_runs = sorted_runs[:int(len(sorted_runs) * show_top)]
+
+    plt.rcParams.update({
+        'axes.spines.right': False,
+        'axes.spines.top': False
+    })
 
     fig, (ax1, ax2) = plt.subplots(1, 2)
     fig.set_figwidth(20)
@@ -165,6 +179,6 @@ if __name__ == '__main__':
     GROUP = 'kw14-test-functionality'
     # test_sweep = get_sweep_by_name('fftower-conv')
     runs = get_runs_by_regex('f', group=GROUP)
-
+    plot_runs_accuracy(runs,'test')
     total_pwr = get_power_consumption(runs)
     print(f'Total Power Consumed: {total_pwr / 1000} (kWh)')

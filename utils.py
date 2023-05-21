@@ -106,11 +106,12 @@ class WBContext:
 
 
 class ModelFileContext:
-    def __init__(self, network: torch.nn.Module, outpath: str, do_reload=True):
+    def __init__(self, network: torch.nn.Module, outpath: str, do_reload=True, interval=2):
         self.network = network
         self.outpath = Path(outpath)
         self.do_reload = do_reload
         self.checkpoints = []
+        self.interval = interval
 
     def __enter__(self):
         info_file = Path(f'{self.outpath.stem}.info')
@@ -129,18 +130,22 @@ class ModelFileContext:
         return self.save_model, loaded
 
     def save_model(self, epoch: int):
-        prefix = self.outpath.stem
-        checkpoint_file = f'{prefix}-ep{epoch}.weights'
-        print(f'Saving model at {checkpoint_file}')
-        parent = Path(checkpoint_file).parent.absolute()
+        if epoch % self.interval == 0:
+            prefix = self.outpath.stem
+            checkpoint_file = f'{prefix}-ep{epoch}.weights'
+            print(f'Saving model at {checkpoint_file}')
+            parent = Path(checkpoint_file).parent.absolute()
 
-        if not os.path.exists(parent):
-            os.makedirs(parent, exist_ok=True)
-        torch.save(self.network.state_dict(), checkpoint_file)
-        self.checkpoints.append(epoch)
-        info_file = Path(f'{self.outpath.stem}.info')
-        with open(info_file, 'w') as f:
-            json.dump(self.checkpoints, f)
+            if not os.path.exists(parent):
+                os.makedirs(parent, exist_ok=True)
+            torch.save(self.network.state_dict(), checkpoint_file)
+            self.checkpoints.append(epoch)
+            info_file = Path(f'{self.outpath.stem}.info')
+            with open(info_file, 'w') as f:
+                json.dump(self.checkpoints, f)
+        else:
+            # not saving skipping for now
+            return
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         print(f'Saving model at {self.outpath}')
