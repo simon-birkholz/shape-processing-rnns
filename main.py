@@ -130,7 +130,7 @@ def train(model,
         if lr_scheduler is not None:
             lr_scheduler.step()
 
-        if save_cb is not None and (epochs + 1) % 10 == 0:
+        if save_cb is not None:
             save_cb(epoch + 1)
 
 

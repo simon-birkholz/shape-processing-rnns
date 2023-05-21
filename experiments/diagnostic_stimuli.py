@@ -77,7 +77,8 @@ def main(
         time_steps: int,
         weights_file: str,
         batch_size: int,
-        normalization: str
+        normalization: str,
+        dropout: float,
 ):
     normal_ds = PascalVoc(dataset_path, set, transform=NORMAL)
     foreground_ds = PascalVoc(dataset_path, set, transform=FOREGROUND)
@@ -93,7 +94,7 @@ def main(
     _, _, imagenet2voc = get_imagenet_class_mapping(dataset_path)
 
     model = FeedForwardTower(tower_type='normal', cell_type=cell_type, cell_kernel=cell_kernel, time_steps=time_steps,
-                             normalization=normalization)
+                             normalization=normalization, dropout=dropout)
 
     state = torch.load(f'../bw_cluster_weights/{weights_file}')
     model.load_state_dict(state)
@@ -122,11 +123,12 @@ if __name__ == '__main__':
     parser.add_argument('--out', type=str, help='name for the saved diagram', default='test-run')
     parser.add_argument('--set', type=str, default='trainval', help='PascalVOC image set to use (e.g. train)')
     parser.add_argument('--norm', type=str, default='layernorm', help='Normalization to use')
+    parser.add_argument('--drop', type=float, default=0.1, help='Dropout used in the model (not sure if needed for evaluation)')
     parser.add_argument('-b', '--batchsize', type=int, default=16)
     args = parser.parse_args()
 
     save_data = main(args.datasets, args.path, args.set, args.cell_type, args.cell_kernel, args.time_steps,
-                     args.weights, args.batchsize, args.norm)
+                     args.weights, args.batchsize, args.norm, args.drop)
 
     save_data['commandline'] = args
 
