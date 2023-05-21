@@ -122,6 +122,7 @@ if __name__ == '__main__':
     parser.add_argument('--out', type=str, help='name for the saved diagram', default='test-run')
     parser.add_argument('--set', type=str, default='trainval', help='PascalVOC image set to use (e.g. train)')
     parser.add_argument('--norm', type=str, default='layernorm', help='Normalization to use')
+    parser.add_argument('--drop', type=float, default=0.1, help='Dropout used in the model (not sure if needed for evaluation)')
     parser.add_argument('-b', '--batchsize', type=int, default=16)
     args = parser.parse_args()
 
