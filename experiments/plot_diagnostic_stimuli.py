@@ -8,10 +8,10 @@ from fdr import fdrcorrection
 
 
 def main(filename: str,
+         modelname: str,
          out_file: str,
          fdr: float,
          show: bool = False):
-
     plt.rcParams.update({
         'font.size': 15,
         'figure.figsize': (8, 5),
@@ -35,16 +35,20 @@ def main(filename: str,
     plt.violinplot(rand_distributions, positions=x_pos + 0.2, widths=0.4, showmeans=True)
     plt.scatter(x_pos[significant] - 0.2, acc_list[significant] + 0.05, marker="*", c="black")
     plt.xticks(x_pos, args.datasets)
+    plt.title(f'Accuracy of {modelname} on diagnostic stimuli')
     plt.savefig('../figures/' + out_file)
+    if show:
+        plt.show()
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--filename", type=str, required=True,
                         help="Path to file with diagnostic stimuli results")
+    parser.add_argument("-n", "--name", type=str, required=True, help="The name of the model")
     parser.add_argument("-o", "--out", type=str, required=True, help="Path to file to save figure in.")
     parser.add_argument("--show", action="store_true", help="If true, shows plot of accuracies (and pauses script).")
     parser.add_argument("--fdr", type=float, default=0.05, help="Value at which to control false discovery rate.")
     args = parser.parse_args()
 
-    main(args.filename, args.out, args.fdr, args.show)
+    main(args.filename, args.name, args.out, args.fdr, args.show)

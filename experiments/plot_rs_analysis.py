@@ -8,6 +8,7 @@ import torch
 import argparse
 
 def main(filename: str,
+         modelname: str,
          out_file: str,
          fdr: float,
          show: bool = False):
@@ -51,6 +52,7 @@ def main(filename: str,
     plt.legend(handles=legend, loc="upper left")
     plt.ylabel('Methods')
     plt.tight_layout()
+    plt.title(f'Similarity to image representations in {modelname}')
     # save figure to file
     plt.savefig('../figures/' + out_file)
     if show:
@@ -59,9 +61,10 @@ def main(filename: str,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--filename", type=str, required=True, help="Path to file with RSA results")
+    parser.add_argument("-n", "--name", type=str, required=True, help="The name of the model")
     parser.add_argument("-o", "--out", type=str, required=True, help="Path to file to save figure in.")
     parser.add_argument("--show", action="store_true", help="If true, shows plot of RSA (and pauses script).")
     parser.add_argument("--fdr", type=float, default=0.05, help="Value at which to control false discovery rate.")
     args = parser.parse_args()
 
-    main(args.filename, args.out, args.fdr, args.show)
+    main(args.filename, args.name, args.out, args.fdr, args.show)
