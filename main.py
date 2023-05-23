@@ -19,6 +19,7 @@ from utils import EarlyStopping, WBContext, ModelFileContext, get_args_names
 from arguments import OPTIMIZERS, LR_SCHEDULER, get_argument_instance
 from models.dev_architecture import get_dev_testing_architecture
 
+
 def train(model,
           optimizer,
           loss_fn,
@@ -40,8 +41,8 @@ def train(model,
     do_wb = wandb.run is not None
     if not do_wb:
         print('Could not find wandb.run object')
-    #else:
-        #wandb.watch(model, log='all')
+    # else:
+    # wandb.watch(model, log='all')
 
     if do_gradient_clipping:
         clip_value = 0.7
@@ -52,7 +53,13 @@ def train(model,
         do_early_stopping = True
         early_stopping = EarlyStopping(tolerance=4)
 
-    lr_scheduler = get_argument_instance(LR_SCHEDULER,lr_scheduler,optimizer,is_optional=True, step_size=lr_step)
+    lr_scheduler = get_argument_instance(LR_SCHEDULER, lr_scheduler, optimizer, is_optional=True, step_size=lr_step)
+
+    if lr_scheduler is not None and start_epoch > 0:
+        for _ in range(0, start_epoch):
+            lr_scheduler.step()
+        print(
+            f'Stepped to epoch {start_epoch}. Learning rate is now {lr_scheduler.get_last_lr()}')  # When we start at a later epoch we need to adjust the lr scheduler accordingly
 
     model.to(device)
     for epoch in range(start_epoch, epochs, 1):
@@ -179,7 +186,7 @@ def learn(dataset: str,
     else:
         raise ValueError(f'Unknown base architecture {model_base}')
 
-    #summary(network, input_size=(batch_size, 3, 224, 224))
+    # summary(network, input_size=(batch_size, 3, 224, 224))
 
     opti = get_argument_instance(OPTIMIZERS, optimizer, network.parameters(), lr=intern_learning_rate,
                                  weight_decay=weight_decay, momentum=momentum)

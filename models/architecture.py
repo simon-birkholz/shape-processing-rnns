@@ -92,6 +92,7 @@ MORE_FILTERS = [64, 64, 128, 128, 256, 256, 512, 512]
 MORE_POOLS = [True, False, True, False, True, False, True, True]
 WIDER_FILTERS = [128, 512, 512, 512, 1024]
 DEEPER_FILTERS = [64, 64, 64, 128, 128, 256, 256, 512, 512, 512]
+DEEPER_POOLS = [True, True, True, True, True]
 
 
 class FeedForwardTower(torch.nn.Module):
@@ -150,6 +151,7 @@ class FeedForwardTower(torch.nn.Module):
             self.do_pooling = NORMAL_POOLS
         elif tower_type == 'deeper':
             filter_counts = [3] + DEEPER_FILTERS
+
         else:
             raise ValueError('Unknown Tower type')
 
