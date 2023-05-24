@@ -22,6 +22,7 @@ import datetime
 
 torch.set_grad_enabled(False)
 
+
 def get_activations(model,
                     data_loader,
                     layer_names: List[str],
@@ -62,11 +63,15 @@ def main(
         datasets: List[str],
         dataset_path: str,
         set: str,
+        method: str,
         cell_type: str,
+        cell_kernel: int,
+        time_steps: int,
         weights_file: str,
         batch_size: int,
-        method: str,
-        show_rdms: bool = False
+        normalization: str,
+        dropout: float,
+        show_rdms=False
 ):
     normal_ds = PascalVoc(dataset_path, set, transform=NORMAL)
     foreground_ds = PascalVoc(dataset_path, set, transform=FOREGROUND)
@@ -87,8 +92,8 @@ def main(
 
     _, _, imagenet2voc = get_imagenet_class_mapping(dataset_path)
 
-    model = FeedForwardTower(tower_type='normal', cell_type=cell_type, cell_kernel=3, time_steps=3,
-                             normalization='layernorm')
+    model = FeedForwardTower(tower_type='normal', cell_type=cell_type, cell_kernel=cell_kernel, time_steps=time_steps,
+                             normalization=normalization, dropout=dropout)
 
     state = torch.load(f'../bw_cluster_weights/{weights_file}')
     model.load_state_dict(state)
@@ -183,9 +188,15 @@ if __name__ == '__main__':
                         nargs='+')
     parser.add_argument('--path', type=str, required=True, help='Path to PascalVOC dataset')
     parser.add_argument('--cell_type', type=str, default='conv', help='Type of (Recurrent) cell to evaluate')
+    parser.add_argument('--cell_kernel', type=str, default=3, help='Sizes of cell kernels')
+    parser.add_argument('--time_steps', type=int, default=3,
+                        help='Amount of timesteps to unroll (for conv defaults to 1)')
     parser.add_argument('--weights', type=str, required=True, help='Path to model weights')
     parser.add_argument('--out', type=str, help='name for the saved data', default='test-run')
     parser.add_argument('--set', type=str, default='trainval', help='PascalVOC image set to use (e.g. train)')
+    parser.add_argument('--norm', type=str, default='layernorm', help='Normalization to use')
+    parser.add_argument('--drop', type=float, default=0.1,
+                        help='Dropout used in the model (not sure if needed for evaluation)')
     parser.add_argument('-b', '--batchsize', type=int, default=16)
     parser.add_argument("--method", type=str, default="fixed",
                         help="How to compare RDMs. Can be 'fixed' (no weighting, use rho-a) or 'weighted' (weighted models, use corr).")
@@ -193,8 +204,8 @@ if __name__ == '__main__':
                         help="If true, shows plot of RDMs (and pauses script halfway).")
     args = parser.parse_args()
 
-    save_data = main(args.datasets, args.path, args.set, args.cell_type, args.weights, args.batchsize,
-                     args.method,
+    save_data = main(args.datasets, args.path, args.set, args.method, args.cell_type, args.cell_kernel, args.time_steps,
+                     args.weights, args.batchsize, args.norm, args.drop,
                      show_rdms=args.show_rdms)
 
     save_data['commandline'] = args

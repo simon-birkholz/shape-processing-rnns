@@ -117,7 +117,7 @@ if __name__ == '__main__':
     parser.add_argument('--path', type=str, required=True, help='Path to PascalVOC dataset')
     parser.add_argument('--cell_type', type=str, default='conv', help='Type of (Recurrent) cell to evaluate')
     parser.add_argument('--cell_kernel', type=str, default=3, help='Sizes of cell kernels')
-    parser.add_argument('--time_steps', type=str, default=3,
+    parser.add_argument('--time_steps', type=int, default=3,
                         help='Amount of timesteps to unroll (for conv defaults to 1)')
     parser.add_argument('--weights', type=str, required=True, help='Path to model weights')
     parser.add_argument('--out', type=str, help='name for the saved diagram', default='test-run')
