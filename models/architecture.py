@@ -77,7 +77,7 @@ class ConvWrapper(torch.nn.Module):
         self.norm = get_maybe_normalization(normalization, out_channels)
         self.activation = activation
 
-    def forward(self, x, hx=None):
+    def forward(self, x, hx=None, t=0):
         out = self.conv(x)
         if self.norm:
             out = self.norm(out)
@@ -105,6 +105,8 @@ class FeedForwardTower(torch.nn.Module):
                  time_steps: int = 1,
                  normalization: str = 'batchnorm',
                  dropout: float = 0.0,
+                 skip_first: bool = False,
+                 do_preconv: bool = True,
                  **kwargs):
         super().__init__()
         for k, v in kwargs.items():
@@ -113,6 +115,8 @@ class FeedForwardTower(torch.nn.Module):
         self.num_classes = num_classes
         self.cell_kernel = cell_kernel
         self.time_steps = time_steps
+        self.skip_first = skip_first
+        self.do_preconv = do_preconv
 
         if self.cell_type == 'conv':
             self.time_steps = 1  # no unrollment necessary
@@ -130,10 +134,10 @@ class FeedForwardTower(torch.nn.Module):
                 return ConvLSTMCell(*args, **kwargs)
         elif self.cell_type == 'reciprocal':
             def get_cell(*args, **kwargs):
-                return ReciprocalGatedCell(*args, **kwargs)
+                return ReciprocalGatedCell(*args, do_preconv=self.do_preconv, **kwargs)
         elif self.cell_type == 'hgru':
-            def get_cell(*args, **kwargs):
-                return hgru_cell.hGRUCell(*args, **kwargs)
+            def get_cell(ins, outs, ks, ss, ac, nn, **kwargs):
+                return hgru_cell.hGRUCell(ins, outs, ks, nn, timesteps=time_steps, **kwargs)
         elif self.cell_type == 'fgru':
             def get_cell(*args, **kwargs):
                 return fgru_cell.fGRUCell(*args, **kwargs)
@@ -170,13 +174,17 @@ class FeedForwardTower(torch.nn.Module):
         stride_sizes = [2] + [1] * (len(filter_counts) - 2)
         print(kernel_sizes)
 
-        # self.conv_blocks = nn.ModuleList(
-        #    [ConvBlock(ins, outs, ks, ss, self.activation, normalization) for (ins, outs), ks, ss in
-        #     zip(pairwise(filter_counts), kernel_sizes, stride_sizes)])
-
-        self.cell_blocks = nn.ModuleList(
-            [get_cell(ins, outs, ks, ss, self.activation, normalization) for (ins, outs), ks, ss in
-             zip(pairwise(filter_counts), kernel_sizes, stride_sizes)])
+        if self.skip_first:
+            # perhaps we want to conciously skip the first cell for a normal convolution
+            self.cell_blocks = nn.ModuleList(
+                [ConvWrapper(filter_counts[0], filter_counts[1], kernel_sizes[0], stride_sizes[0],
+                             self.activation, normalization)] +
+                [get_cell(ins, outs, ks, ss, self.activation, normalization) for (ins, outs), ks, ss in
+                 zip(pairwise(filter_counts[1:]), kernel_sizes[1:], stride_sizes[1:])])
+        else:
+            self.cell_blocks = nn.ModuleList(
+                [get_cell(ins, outs, ks, ss, self.activation, normalization) for (ins, outs), ks, ss in
+                 zip(pairwise(filter_counts), kernel_sizes, stride_sizes)])
 
         self.last_conv = nn.Conv2d(filter_counts[-1], self.num_classes, 3, 1)
 
@@ -186,7 +194,7 @@ class FeedForwardTower(torch.nn.Module):
 
         self.dropout = SpatialDropout(p=dropout)
 
-        if self.cell_type in ['conv', 'rnn', 'gru']:
+        if self.cell_type in ['conv', 'rnn', 'gru', 'hgru']:
             self.get_x = lambda out: out
         elif self.cell_type in ['lstm', 'reciprocal']:
             self.get_x = lambda out: out[0]
@@ -212,7 +220,7 @@ class FeedForwardTower(torch.nn.Module):
             x = input
             for i in range(len(self.cell_blocks)):
                 # x = self.conv_blocks[i](x)
-                x = self.cell_blocks[i](x, hidden[i])
+                x = self.cell_blocks[i](x, hidden[i], t)
                 hidden[i] = x
                 x = self.get_x(x)
 

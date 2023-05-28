@@ -65,7 +65,7 @@ class ConvRNNCell(torch.nn.Module):
         self.h2h = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                              padding='same')
 
-    def forward(self, input, hx=None):
+    def forward(self, input, hx=None, t=0):
         # Inputs:
         # input: of shape (batch_size, input_size,height_size, width_size)
         # hx: of shape (batch_size, hidden_size,height_size, width_size)
@@ -126,7 +126,7 @@ class ConvGruCell(torch.nn.Module):
         # self.can = nn.Conv2d(in_channels=in_channels + out_channels, out_channels=out_channels, kernel_size=kernel_size,
         #                     padding='same')
 
-    def forward(self, input, hx=None):
+    def forward(self, input, hx=None, t=0):
         # Inputs:
         # input: of shape (batch_size, input_size,height_size, width_size)
         # hx: of shape (batch_size, hidden_size,height_size, width_size)
@@ -208,7 +208,7 @@ class ConvLSTMCell(torch.nn.Module):
         self.ucan = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                               padding='same')
 
-    def forward(self, input, hidden_state=None):
+    def forward(self, input, hidden_state=None, t=0):
         # Inputs:
         # input: of shape (batch_size, input_size,height_size, width_size)
         # hx: of shape (batch_size, hidden_size,height_size, width_size)
@@ -291,7 +291,7 @@ class ReciprocalGatedCell(torch.nn.Module):
         self.wcc = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
                              padding='same')
 
-    def forward(self, input, hidden_state=None):
+    def forward(self, input, hidden_state=None, t=0):
 
         if hidden_state is None:
             if self.stride == 1:
