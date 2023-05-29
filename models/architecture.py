@@ -197,7 +197,12 @@ class FeedForwardTower(torch.nn.Module):
         if self.cell_type in ['conv', 'rnn', 'gru', 'hgru']:
             self.get_x = lambda out: out
         elif self.cell_type in ['lstm', 'reciprocal']:
-            self.get_x = lambda out: out[0]
+            def get_x(x):
+                if isinstance(x, tuple):
+                    return x[0]
+                else:
+                    return x
+            self.get_x = get_x
 
         # do He initialization
         for m in self.modules():

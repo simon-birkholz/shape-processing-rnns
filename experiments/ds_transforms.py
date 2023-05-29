@@ -38,6 +38,7 @@ class EnlargeAndCropBoundingBox:
     """ Takes a image and a bounding box and crops the images by the provided factor bigger than the bounding box.
         It then adjusts the values of the bounding box and returns the cropped image and the updated bounding box
     """
+
     def __init__(self, factor=1.4):
         self.factor = factor
 
@@ -77,6 +78,7 @@ class EnlargeImageAndMask():
 class FrankensteinFlip:
     """Performs the frankenstein flip on the provided image.
     """
+
     def __call__(self, image):
         image_array = np.array(image)
 
@@ -93,6 +95,7 @@ class FrankensteinFlip:
 
 class SerratedDilation:
     """Takes an image and a mask. It then uses the mask to determine the borders by a binary dilation and then applies gaussian noise to the border."""
+
     def __init__(self, borderwidth=5, sigma=2.0):
         self.borderwidth = borderwidth
         self.sigma = sigma
@@ -128,12 +131,24 @@ class MyCompose(object):
         return state
 
 
+mean=[0.485, 0.456, 0.406]
+std=[0.229, 0.224, 0.225]
+
+
+DEV_TEST = tfs.Compose([MyCompose([
+    DiscardMaskAndBox()
+]),
+    tfs.Resize((224, 224)),
+    tfs.ToTensor(),
+    tfs.Normalize(mean=mean, std=std)])
+
 NORMAL = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
     DiscardMaskAndBox()
 ]),
     tfs.Resize((224, 224)),
-    tfs.ToTensor()])
+    tfs.ToTensor(),
+    tfs.Normalize(mean=mean, std=std)])
 
 FOREGROUND = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
@@ -141,7 +156,8 @@ FOREGROUND = tfs.Compose([MyCompose([
     DiscardMaskAndBox()
 ]),
     tfs.Resize((224, 224)),
-    tfs.ToTensor()])
+    tfs.ToTensor(),
+    tfs.Normalize(mean=mean, std=std)])
 
 SHILOUETTE = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
@@ -150,7 +166,8 @@ SHILOUETTE = tfs.Compose([MyCompose([
     DiscardMaskAndBox()
 ]),
     tfs.Resize((224, 224)),
-    tfs.ToTensor()])
+    tfs.ToTensor(),
+    tfs.Normalize(mean=mean, std=std)])
 
 FRANKENSTEIN = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
@@ -160,7 +177,8 @@ FRANKENSTEIN = tfs.Compose([MyCompose([
 ]),
     tfs.Resize((224, 224)),
     FrankensteinFlip(),
-    tfs.ToTensor()])
+    tfs.ToTensor(),
+    tfs.Normalize(mean=mean, std=std)])
 
 SERRATED = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
@@ -170,4 +188,5 @@ SERRATED = tfs.Compose([MyCompose([
     DiscardMaskAndBox()
 ]),
     tfs.Resize((224, 224)),
-    tfs.ToTensor()])
+    tfs.ToTensor(),
+    tfs.Normalize(mean=mean, std=std)])

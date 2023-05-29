@@ -15,7 +15,7 @@ from typing import List
 from datasets.imagenet_classes import get_imagenet_class_mapping
 from models.architecture import FeedForwardTower
 
-from ds_transforms import NORMAL, FOREGROUND, SHILOUETTE, FRANKENSTEIN, SERRATED
+from ds_transforms import NORMAL, FOREGROUND, SHILOUETTE, FRANKENSTEIN, SERRATED, DEV_TEST
 
 
 def permutation_test(probs, labels, n=1000):
@@ -40,22 +40,23 @@ def classify(model,
     val_examples = 0
     all_voc_predicitions = torch.empty((0), dtype=torch.int32)
     all_labels = torch.empty((0), dtype=torch.int32)
-    for batch in data_loader:
-        inputs, targets = batch
-        inputs = inputs.to(device)
-        all_labels = torch.cat((all_labels, targets), dim=0)
+    with torch.no_grad():
+        for batch in data_loader:
+            inputs, targets = batch
+            inputs = inputs.to(device)
+            all_labels = torch.cat((all_labels, targets), dim=0)
 
-        outputs = model(inputs)
-        probabilities = F.softmax(outputs, dim=1)
-        predicted = torch.argmax(probabilities, dim=1)
+            outputs = model(inputs)
+            probabilities = F.softmax(outputs, dim=1)
+            predicted = torch.argmax(probabilities, dim=1)
 
-        voc_predicted = torch.as_tensor([imagenet2voc[p] for p in predicted], dtype=torch.int32)
-        voc_predicted = voc_predicted.to('cpu')
+            voc_predicted = torch.as_tensor([imagenet2voc[p] for p in predicted], dtype=torch.int32)
+            voc_predicted = voc_predicted.to('cpu')
 
-        all_voc_predicitions = torch.cat((all_voc_predicitions, voc_predicted), dim=0)
+            all_voc_predicitions = torch.cat((all_voc_predicitions, voc_predicted), dim=0)
 
-        val_correct += torch.sum(voc_predicted == targets).item()
-        val_examples += predicted.shape[0]
+            val_correct += torch.sum(voc_predicted == targets).item()
+            val_examples += predicted.shape[0]
 
     val_accuracy = (val_correct / val_examples)
     perm_distributions = permutation_test(all_voc_predicitions, all_labels)
@@ -80,7 +81,7 @@ def main(
         normalization: str,
         dropout: float,
 ):
-    normal_ds = PascalVoc(dataset_path, set, transform=NORMAL)
+    normal_ds = PascalVoc(dataset_path, set, transform=DEV_TEST)
     foreground_ds = PascalVoc(dataset_path, set, transform=FOREGROUND)
     shilouette_ds = PascalVoc(dataset_path, set, transform=SHILOUETTE)
     frankenstein_ds = PascalVoc(dataset_path, set, transform=FRANKENSTEIN)
@@ -124,7 +125,7 @@ if __name__ == '__main__':
     parser.add_argument('--set', type=str, default='trainval', help='PascalVOC image set to use (e.g. train)')
     parser.add_argument('--norm', type=str, default='layernorm', help='Normalization to use')
     parser.add_argument('--drop', type=float, default=0.1, help='Dropout used in the model (not sure if needed for evaluation)')
-    parser.add_argument('-b', '--batchsize', type=int, default=16)
+    parser.add_argument('-b', '--batchsize', type=int, default=64)
     args = parser.parse_args()
 
     save_data = main(args.datasets, args.path, args.set, args.cell_type, args.cell_kernel, args.time_steps,

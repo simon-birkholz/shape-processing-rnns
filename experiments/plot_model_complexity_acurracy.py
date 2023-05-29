@@ -14,7 +14,7 @@ def get_model_complexities(cell_types, tower_type):
     return result
 
 
-ACC = {'conv': 0.4596, 'rnn': {3: 0.5222, 5: 0.5429}, }
+ACC = {'conv': 0.4596, 'rnn': {3: 0.5222, 5: 0.5429, 7: 0.5575}, 'reciprocal': {3: 0.5262, 5: 0.5327}}
 
 if __name__ == '__main__':
     model_params = {k: get_model_complexities([k], 'normal')[0] for k in ACC.keys()}
@@ -30,24 +30,23 @@ if __name__ == '__main__':
 
     factor = 10 ** 6
 
-    for idx,cell_type in enumerate(ACC.keys()):
+    for idx, cell_type in enumerate(ACC.keys()):
         cell_acc = ACC[cell_type]
         color = colorseq[idx]
         if isinstance(cell_acc, abc.Mapping):
             for ts in cell_acc.keys():
-                plt.plot(model_params[cell_type] / factor, cell_acc[ts], 'o', label=f'{cell_type} T={ts}',color=color)
-                plt.text(model_params[cell_type] / factor, cell_acc[ts], f' {cell_type} T={ts}', horizontalalignment='left',
+                plt.plot(model_params[cell_type] / factor, cell_acc[ts], 'o', label=f'{cell_type} T={ts}', color=color)
+                plt.text(model_params[cell_type] / factor, cell_acc[ts], f' {cell_type} T={ts}',
+                         horizontalalignment='left',
                          verticalalignment='center')
         else:
-            plt.plot(model_params[cell_type] / factor, cell_acc, 'o', label=cell_type,color=color)
+            plt.plot(model_params[cell_type] / factor, cell_acc, 'o', label=cell_type, color=color)
             plt.text(model_params[cell_type] / factor, cell_acc, f' {cell_type}', horizontalalignment='left',
                      verticalalignment='center')
 
-    plt.xlim(4,35)
-    plt.ylim(0.45,0.65)
+    plt.xlim(4, 35)
+    plt.ylim(0.45, 0.65)
     plt.xlabel('Number of Parameters x10^6')
     plt.ylabel('Accuracy on Imagenet')
     # plt.legend()
     plt.savefig('../figures/model-complexity-acc.png')
-
-

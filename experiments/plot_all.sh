@@ -3,6 +3,8 @@ Q="0.05"
 EXT="png"
 # plot diagnostic stimuli plots
 
+python plot_diagnostic_stimuli.py -f ../results/stimuli/2023-05-23-23-39_stimuli_conv.pt -o diagnostic_stimuli_conv.$EXT --fdr $Q -n "Conv"
+
 python plot_diagnostic_stimuli.py -f ../results/stimuli/2023-05-21-19-50_stimuli_rnn_ts3.pt -o diagnostic_stimuli_rnn_ts3.$EXT --fdr $Q -n "RNN (T=3)"
 python plot_diagnostic_stimuli.py -f ../results/stimuli/2023-05-23-21-41_stimuli_rnn-ts5.pt -o diagnostic_stimuli_rnn_ts5.$EXT --fdr $Q -n "RNN (T=5)"
 
