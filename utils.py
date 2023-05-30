@@ -106,7 +106,7 @@ class WBContext:
 
 
 class ModelFileContext:
-    def __init__(self, network: torch.nn.Module, outpath: str, do_reload=True, interval=2):
+    def __init__(self, network: torch.nn.Module, outpath: str, do_reload=True, interval=5):
         self.network = network
         self.outpath = Path(outpath)
         self.do_reload = do_reload
