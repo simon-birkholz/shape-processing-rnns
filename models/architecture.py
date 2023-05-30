@@ -32,12 +32,18 @@ class SpatialDropout(nn.Module):
         self.dropout = nn.Dropout2d(p=p)  # internally use the normal dropout2d layer
 
     def forward(self, x, mask=None):
+        h = None
+        if isinstance(x, tuple):
+            x, h = x
         if mask is None:
             mask = torch.ones(*x.shape)
             mask = mask.to(x.get_device())
             mask = self.dropout(mask)
 
         x = mask * x
+        if h is not None:
+            h = mask * h
+            return (x, h), mask
         return x, mask
     # When no mask supplied generate a new one
 
@@ -202,6 +208,7 @@ class FeedForwardTower(torch.nn.Module):
                     return x[0]
                 else:
                     return x
+
             self.get_x = get_x
 
         # do He initialization
@@ -232,7 +239,8 @@ class FeedForwardTower(torch.nn.Module):
                 if self.do_pooling[i]:
                     x = self.pooling(x)
 
-        x, dropout_mask = self.dropout(x, dropout_mask)
+            hidden[-1], dropout_mask = self.dropout(hidden[-1], dropout_mask)
+        x, _ = self.dropout(x, self.pooling(dropout_mask))
         x = self.last_conv(x)
         x = self.flatten(x)
 
