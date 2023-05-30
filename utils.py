@@ -10,6 +10,7 @@ import inspect
 
 import collections.abc as abc
 
+
 def traverse_obj(obj, *keys):
     for k in keys:
         if isinstance(obj, abc.Mapping) and k in obj.keys():
@@ -17,6 +18,7 @@ def traverse_obj(obj, *keys):
         else:
             return None
     return obj
+
 
 def get_args_names(fn):
     sign = inspect.getfullargspec(fn)
@@ -106,8 +108,10 @@ class WBContext:
 
 
 class ModelFileContext:
-    def __init__(self, network: torch.nn.Module, outpath: str, do_reload=True, interval=5):
+
+    def __init__(self, network: torch.nn.Module, optim: torch.optim.Optimizer, outpath: str, do_reload=True, interval=5):
         self.network = network
+        self.optim = optim
         self.outpath = Path(outpath)
         self.do_reload = do_reload
         self.checkpoints = []
@@ -117,6 +121,7 @@ class ModelFileContext:
         info_file = Path(f'{self.outpath.stem}.info')
         prefix = self.outpath.stem
         loaded = 0
+        loaded_optimizer = False
         if self.do_reload and info_file.exists():
             with open(info_file, 'r') as f:
                 self.checkpoints = json.load(f)
@@ -126,8 +131,18 @@ class ModelFileContext:
             print(f'Loading model from {best_checkpoint_file}')
             state = torch.load(best_checkpoint_file)
             self.network.load_state_dict(state)
+            if self.optim is not None:
+                try:
+                    best_optim_file = f'{prefix}-ep{best_checkpoint}.optim'
+                    print(f'Try loading optimizer from {best_optim_file}')
+                    optim_state = torch.load(best_checkpoint_file)
+                    self.optim.load_state_dict(optim_state)
+                    print(f'Loaded optimizer state from {best_optim_file}')
+                    loaded_optimizer = True
+                except:
+                    print(f'Error on loading optimizer state')
             loaded = best_checkpoint
-        return self.save_model, loaded
+        return self.save_model, loaded, loaded_optimizer
 
     def save_model(self, epoch: int):
         if epoch % self.interval == 0:
@@ -139,6 +154,13 @@ class ModelFileContext:
             if not os.path.exists(parent):
                 os.makedirs(parent, exist_ok=True)
             torch.save(self.network.state_dict(), checkpoint_file)
+            if self.optim is not None:
+                try:
+                    optim_file = f'{prefix}-ep{epoch}.optim'
+                    torch.save(self.optim.state_dict(), optim_file)
+                except:
+                    print(f'Error on loading optimizer state')
+
             self.checkpoints.append(epoch)
             info_file = Path(f'{self.outpath.stem}.info')
             with open(info_file, 'w') as f:
