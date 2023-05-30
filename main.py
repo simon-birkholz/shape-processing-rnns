@@ -35,6 +35,7 @@ def train(model,
           lr_step: int = None,
           save_cb=None,
           start_epoch: int = 0,
+          loaded_optim: bool = False,
           device: str = 'cpu'):
     if val_loader:
         print('Detected Validation Dataset')
@@ -54,9 +55,12 @@ def train(model,
         do_early_stopping = True
         early_stopping = EarlyStopping(tolerance=4)
 
-    lr_scheduler = get_argument_instance(LR_SCHEDULER, lr_scheduler, optimizer, is_optional=True, step_size=lr_step)
-
-    if lr_scheduler is not None and start_epoch > 0:
+    if loaded_optim:
+        lr_scheduler = get_argument_instance(LR_SCHEDULER, lr_scheduler, optimizer, is_optional=True, step_size=lr_step,
+                                             last_epoch=start_epoch)
+    else:
+        lr_scheduler = get_argument_instance(LR_SCHEDULER, lr_scheduler, optimizer, is_optional=True, step_size=lr_step)
+    if lr_scheduler is not None and start_epoch > 0 and not loaded_optim:
         for _ in range(0, start_epoch):
             lr_scheduler.step()
         print(
@@ -200,9 +204,9 @@ def learn(dataset: str,
 
     loss = nn.CrossEntropyLoss()
 
-    with ModelFileContext(network, save_dir) as (save_cb, loaded_epoch):
+    with ModelFileContext(network, opti, save_dir) as (save_cb, loaded_epoch, loaded_optim):
         train(network, opti, loss, train_data_loader, val_data_loader, batch_frag=batch_frag,
-              device='cuda', save_cb=save_cb, start_epoch=loaded_epoch, **train_config)
+              device='cuda', save_cb=save_cb, start_epoch=loaded_epoch, loaded_optim=loaded_optim, **train_config)
 
 
 if __name__ == '__main__':
