@@ -4,6 +4,7 @@ import os
 import random
 from typing import Union
 
+import serrelabmodels.gamanet
 import torch
 import torch.nn.utils
 import torch.nn as nn
@@ -183,6 +184,8 @@ def learn(dataset: str,
         network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=None)
     elif model_base == 'dev_tower':
         network = get_dev_testing_architecture()
+    elif model_base == 'gammanet':
+        network = serrelabmodels.gamanet.BaseGN()
     else:
         raise ValueError(f'Unknown base architecture {model_base}')
 
