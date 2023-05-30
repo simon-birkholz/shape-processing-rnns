@@ -111,6 +111,7 @@ class FeedForwardTower(torch.nn.Module):
                  time_steps: int = 1,
                  normalization: str = 'batchnorm',
                  dropout: float = 0.0,
+                 dropout_recurrent: bool = False,
                  skip_first: bool = False,
                  do_preconv: bool = True,
                  **kwargs):
@@ -123,6 +124,7 @@ class FeedForwardTower(torch.nn.Module):
         self.time_steps = time_steps
         self.skip_first = skip_first
         self.do_preconv = do_preconv
+        self.dropout_recurrent = dropout_recurrent
 
         if self.cell_type == 'conv':
             self.time_steps = 1  # no unrollment necessary
@@ -239,8 +241,13 @@ class FeedForwardTower(torch.nn.Module):
                 if self.do_pooling[i]:
                     x = self.pooling(x)
 
-            hidden[-1], dropout_mask = self.dropout(hidden[-1], dropout_mask)
-        x, _ = self.dropout(x, self.pooling(dropout_mask))
+            if self.dropout_recurrent:
+                hidden[-1], dropout_mask = self.dropout(hidden[-1], dropout_mask)
+
+        if self.dropout_recurrent:
+            x, _ = self.dropout(x, self.pooling(dropout_mask))
+        else:
+            x, _ = self.dropout(x, dropout_mask)
         x = self.last_conv(x)
         x = self.flatten(x)
 
