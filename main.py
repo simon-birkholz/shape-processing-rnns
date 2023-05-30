@@ -185,7 +185,7 @@ def learn(dataset: str,
     elif model_base == 'dev_tower':
         network = get_dev_testing_architecture()
     elif model_base == 'gammanet':
-        network = serrelabmodels.gamanet.BaseGN()
+        network = serrelabmodels.gamanet.BaseGN(timesteps=config.get('time_steps', 3))
     else:
         raise ValueError(f'Unknown base architecture {model_base}')
 
