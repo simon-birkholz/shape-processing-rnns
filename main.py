@@ -238,6 +238,11 @@ if __name__ == '__main__':
         if config['wb_run_name'] == 'none':
             config['wb_run_name'] = None
 
+        if 'seed' in config.keys():
+            random.seed(int(config['seed']))
+        else:
+            random.seed(10)
+
         with WBContext(config) as wb:
             if callable(wb):
                 wb(learn)
