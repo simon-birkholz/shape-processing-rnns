@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 import wandb
 from datasets.selection import select_dataset
-from models.architecture import FeedForwardTower
+from models.architecture import FeedForwardTower, GammaNetWrapper
 from utils import EarlyStopping, WBContext, ModelFileContext, get_args_names
 
 from arguments import OPTIMIZERS, LR_SCHEDULER, get_argument_instance
@@ -177,10 +177,12 @@ def learn(dataset: str,
     train_data_loader, val_data_loader, num_classes = select_dataset(dataset, dataset_path, dataset_val_path,
                                                                      intern_batch_size)
     model_args = get_args_names(FeedForwardTower.__init__)
+    gamma_args = get_args_names(GammaNetWrapper.__init__)
     train_args = get_args_names(train)
 
     model_config = {k: v for k, v in config.items() if k in model_args}
     train_config = {k: v for k, v in config.items() if k in train_args}
+    gamma_config = {k: v for k, v in config.items() if k in gamma_args}
 
     if model_base == 'ff_tower':
         network = FeedForwardTower(num_classes=num_classes, **model_config)
@@ -189,7 +191,7 @@ def learn(dataset: str,
     elif model_base == 'dev_tower':
         network = get_dev_testing_architecture()
     elif model_base == 'gammanet':
-        network = serrelabmodels.gamanet.BaseGN(timesteps=config.get('time_steps', 3))
+        network = GammaNetWrapper(num_classes=num_classes, **gamma_config)
     else:
         raise ValueError(f'Unknown base architecture {model_base}')
 

@@ -7,6 +7,7 @@ import functools
 import torch.jit as jit
 from .utils import _pair
 from models.cells import ConvRNNCell, ConvGruCell, ConvLSTMCell, ReciprocalGatedCell
+import serrelabmodels.gamanet
 
 from models.cells import get_maybe_normalization, get_maybe_padded_conv
 from serrelabmodels.layers import fgru_cell, hgru_cell
@@ -255,3 +256,38 @@ class FeedForwardTower(torch.nn.Module):
             return x, hidden
 
         return x
+
+
+class GammaNetWrapper(torch.nn.Module):
+    def __init__(self,
+                 num_classes: int = 1000,
+                 time_steps: int = 1,
+                 **kwargs):
+        super().__init__()
+        for k, v in kwargs.items():
+            print(f"Unknown Parameter {k}:{v}")
+        self.time_steps = time_steps
+        self.network = serrelabmodels.gamanet.BaseGN(timesteps=time_steps)
+        self.num_classes = num_classes
+
+        self.flatten = nn.Flatten()
+        self.cls = nn.Linear(224 * 224, self.num_classes)
+
+    def forward(self, input,
+                return_hidden=False,
+                time_steps=-1):
+        hidden = None
+        if time_steps == -1:
+            time_steps = self.time_steps
+        if return_hidden:
+            x, hidden = self.network(input, return_hidden=True)
+        else:
+            x = self.network(input, return_hidden=False)
+
+        x = self.flatten(x)
+        x = self.cls(x)
+
+        if return_hidden:
+            return x, hidden
+        else:
+            return x
