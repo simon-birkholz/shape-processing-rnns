@@ -81,7 +81,7 @@ def main(
         normalization: str,
         dropout: float,
 ):
-    normal_ds = PascalVoc(dataset_path, set, transform=DEV_TEST)
+    normal_ds = PascalVoc(dataset_path, set, transform=NORMAL)
     foreground_ds = PascalVoc(dataset_path, set, transform=FOREGROUND)
     shilouette_ds = PascalVoc(dataset_path, set, transform=SHILOUETTE)
     frankenstein_ds = PascalVoc(dataset_path, set, transform=FRANKENSTEIN)

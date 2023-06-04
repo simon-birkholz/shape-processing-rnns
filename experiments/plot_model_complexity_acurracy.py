@@ -14,7 +14,8 @@ def get_model_complexities(cell_types, tower_type):
     return result
 
 
-ACC = {'conv': 0.4596, 'rnn': {3: 0.5222, 5: 0.5429, 7: 0.5575}, 'reciprocal': {3: 0.5262, 5: 0.5327}}
+ACC = {'conv': 0.4538, 'rnn': {3: 0.5222, 5: 0.5429, 7: 0.5575, 9: 0.5644, 11: 0.5697, 13: 0.572, 15: 0.5726},
+       'reciprocal': {3: 0.5262, 5: 0.5327}}
 
 if __name__ == '__main__':
     model_params = {k: get_model_complexities([k], 'normal')[0] for k in ACC.keys()}
