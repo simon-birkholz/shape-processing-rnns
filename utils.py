@@ -108,8 +108,8 @@ class WBContext:
 
 
 class ModelFileContext:
-    def __init__(self, network: torch.nn.Module, optim: torch.optim.Optimizer, outpath: str, do_reload=True,
-                 interval=2):
+
+    def __init__(self, network: torch.nn.Module, optim: torch.optim.Optimizer, outpath: str, do_reload=True, interval=5):
         self.network = network
         self.optim = optim
         self.outpath = Path(outpath)

@@ -17,6 +17,8 @@ WEIGHTS=tmp/model-$RAND_ID.weights
 
 cp config.json.in $CONF_IN
 
+NAME="${2:none}"
+
 touch $JOB
 
 cat scripts/preamble.sh >> $JOB
@@ -26,10 +28,10 @@ cat scripts/bwcluster_pre.sh >> $JOB
 
 echo "cat $CONF_IN | envsubst > $CONF_READY" >> $JOB
 
-echo "python main.py $CONF_READY --out $WEIGHTS" >> $JOB
+echo "python main.py $CONF_READY --out $WEIGHTS --wbname $NAME" >> $JOB
 
 nojobs=${1:-5}
-dep_type="${2:-afterany}"
+dep_type="afterany"
 
 loop_cnt=1
 
