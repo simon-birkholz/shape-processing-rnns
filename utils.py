@@ -107,6 +107,9 @@ class WBContext:
             self.run.finish()
 
 
+def remove_extension(path: Path)-> str:
+    return os.path.splitext(path)[0]
+
 class ModelFileContext:
 
     def __init__(self, network: torch.nn.Module, optim: torch.optim.Optimizer, outpath: str, do_reload=True, interval=5):
@@ -118,8 +121,8 @@ class ModelFileContext:
         self.interval = interval
 
     def __enter__(self):
-        info_file = Path(f'{self.outpath.stem}.info')
-        prefix = self.outpath.stem
+        info_file = Path(f'{remove_extension(self.outpath)}.info')
+        prefix = remove_extension(self.outpath)
         loaded = 0
         loaded_optimizer = False
         if self.do_reload and info_file.exists():
@@ -146,7 +149,7 @@ class ModelFileContext:
 
     def save_model(self, epoch: int):
         if epoch % self.interval == 0:
-            prefix = self.outpath.stem
+            prefix = remove_extension(self.outpath)
             checkpoint_file = f'{prefix}-ep{epoch}.weights'
             print(f'Saving model at {checkpoint_file}')
             parent = Path(checkpoint_file).parent.absolute()
@@ -162,7 +165,7 @@ class ModelFileContext:
                     print(f'Error on loading optimizer state')
 
             self.checkpoints.append(epoch)
-            info_file = Path(f'{self.outpath.stem}.info')
+            info_file = Path(f'{remove_extension(self.outpath)}.info')
             with open(info_file, 'w') as f:
                 json.dump(self.checkpoints, f)
         else:
