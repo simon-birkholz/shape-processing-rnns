@@ -87,7 +87,7 @@ class FrankensteinFlip:
         image_array = np.vstack((upper, lower))
 
         left, right = np.split(image_array, 2, axis=1)
-        right = np.flip(right)
+        right = np.flip(right, axis=0)
         image_array = np.hstack((left, right))
 
         return F.to_pil_image(image_array)
@@ -96,7 +96,7 @@ class FrankensteinFlip:
 class SerratedDilation:
     """Takes an image and a mask. It then uses the mask to determine the borders by a binary dilation and then applies gaussian noise to the border."""
 
-    def __init__(self, borderwidth=5, sigma=2.0):
+    def __init__(self, borderwidth=10, sigma=2.0):
         self.borderwidth = borderwidth
         self.sigma = sigma
 
