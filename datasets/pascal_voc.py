@@ -46,6 +46,7 @@ class PascalVoc(Dataset):
         annotations_dir = os.path.join(root, "Annotations")
         segmask_dir = os.path.join(root, "SegmentationClass")
         for file in files:
+
             with open(os.path.join(annotations_dir, f"{file}.xml")) as f:
                 annotations = xmltodict.parse(f.read())
 
@@ -54,7 +55,12 @@ class PascalVoc(Dataset):
                 # more than one object
                 continue
 
-            if objects['truncated'] == '1' or objects['difficult'] == '1':
+            if objects['truncated'] == '1' or objects['difficult'] == '1' or objects.get('occluded','1') != '0':
+                # images from 2007 do not have the occluded property
+                continue
+
+
+            if traverse_obj(annotations,'annotation', 'segmented') == '0':
                 continue
 
             bnbbox = traverse_obj(objects, 'bndbox')
@@ -67,7 +73,7 @@ class PascalVoc(Dataset):
             self.bndboxes.append(bbox)
 
             target = self.classes.index(objects['name'])
-            self.targets.append(target+1) # Zero class means not in pascal voc
+            self.targets.append(target+1)
 
             sample_path = os.path.join(image_dir, f'{file}.jpg')
             self.samples.append(sample_path)

@@ -145,16 +145,20 @@ NORMAL = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
     DiscardMaskAndBox()
 ]),
-    tfs.Resize((224, 224)),
-    tfs.ToTensor()])
+    tfs.ToTensor(),
+    tfs.Resize((224, 224), interpolation=tfs.InterpolationMode.NEAREST),
+    tfs.ConvertImageDtype(torch.float32),
+    tfs.Normalize(mean=mean,std=std)])
 
 FOREGROUND = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
     FillOutMask(inverted=True, fill=255),
     DiscardMaskAndBox()
 ]),
-    tfs.Resize((224, 224)),
-    tfs.ToTensor()])
+    tfs.ToTensor(),
+    tfs.Resize((224, 224), interpolation=tfs.InterpolationMode.NEAREST),
+    tfs.ConvertImageDtype(torch.float32),
+    tfs.Normalize(mean=mean,std=std)])
 
 SHILOUETTE = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
@@ -162,8 +166,10 @@ SHILOUETTE = tfs.Compose([MyCompose([
     FillOutMask(inverted=False, fill=0),
     DiscardMaskAndBox()
 ]),
-    tfs.Resize((224, 224)),
-    tfs.ToTensor()])
+    tfs.ToTensor(),
+    tfs.Resize((224, 224), interpolation=tfs.InterpolationMode.NEAREST),
+    tfs.ConvertImageDtype(torch.float32),
+    tfs.Normalize(mean=mean,std=std)])
 
 FRANKENSTEIN = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
@@ -171,9 +177,11 @@ FRANKENSTEIN = tfs.Compose([MyCompose([
     FillOutMask(inverted=False, fill=0),
     DiscardMaskAndBox()
 ]),
-    tfs.Resize((224, 224)),
+    tfs.Resize((224, 224), interpolation=tfs.InterpolationMode.NEAREST),
     FrankensteinFlip(),
-    tfs.ToTensor()])
+    tfs.ToTensor(),
+    tfs.ConvertImageDtype(torch.float32),
+    tfs.Normalize(mean=mean,std=std)])
 
 SERRATED = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
@@ -182,5 +190,7 @@ SERRATED = tfs.Compose([MyCompose([
     SerratedDilation(),
     DiscardMaskAndBox()
 ]),
-    tfs.Resize((224, 224)),
-    tfs.ToTensor()])
+    tfs.ToTensor(),
+    tfs.Resize((224, 224), interpolation=tfs.InterpolationMode.NEAREST),
+    tfs.ConvertImageDtype(torch.float32),
+    tfs.Normalize(mean=mean,std=std)])
