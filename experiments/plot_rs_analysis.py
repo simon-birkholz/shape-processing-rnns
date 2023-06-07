@@ -30,6 +30,10 @@ def main(filename: str,
         'axes.spines.top': False
     })
 
+    if args.method == "fixed":
+        method_string = r'rank-correlation $(\rho_a)$'
+    elif args.method == "weighted":
+        method_string = r'linear correlation $(r)$'
 
     # Plot all comparison results in custom bar plot
     xs = np.array(
@@ -50,7 +54,7 @@ def main(filename: str,
     plt.xticks(xticks, labels=comparison_layers)
     plt.ylim(top=1.0, bottom=-0.25)
     plt.legend(handles=legend, loc="upper left")
-    plt.ylabel('Methods')
+    plt.ylabel(method_string)
     plt.tight_layout()
     plt.title(f'Similarity to image representations in {modelname}')
     # save figure to file
