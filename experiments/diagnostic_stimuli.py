@@ -95,7 +95,7 @@ def main(
     _, _, imagenet2voc = get_imagenet_class_mapping(dataset_path)
 
     model = FeedForwardTower(tower_type='normal', cell_type=cell_type, cell_kernel=cell_kernel, time_steps=time_steps,
-                             normalization=normalization, dropout=dropout)
+                             normalization=normalization, dropout=dropout, do_preconv=True)
 
     state = torch.load(f'../bw_cluster_weights/{weights_file}')
     model.load_state_dict(state)

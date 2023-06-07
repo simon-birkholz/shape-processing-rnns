@@ -26,6 +26,7 @@ torch.set_grad_enabled(False)
 def get_activations(model,
                     data_loader,
                     layer_names: List[str],
+                    state: str,
                     device: str = 'cpu'):
     model.to(device)
     model.eval()
@@ -47,6 +48,17 @@ def get_activations(model,
         inputs = inputs.to(device)
 
         outputs, hidden = model(inputs, return_hidden=True)
+
+        if model.cell_type in ['reciprocal', 'lstm']:
+            if state == 'hidden':
+                hidden, _ = zip(*hidden)
+                hidden = list(hidden)
+            elif state == 'cell':
+                _, hidden = zip(*hidden)
+                hidden = list(hidden)
+            else:
+                raise ValueError(f'Unknown cell state {state}')
+
         for layer_name, layer_state in zip(layer_names, hidden):
             activations[layer_name].append(flatten(layer_state).cpu().detach().numpy())
 
@@ -64,6 +76,7 @@ def main(
         dataset_path: str,
         set: str,
         method: str,
+        cstate: str,
         cell_type: str,
         cell_kernel: int,
         time_steps: int,
@@ -104,7 +117,7 @@ def main(
     for ds, ds_name in all_datasets_full:
         ds_loader = data.DataLoader(ds, batch_size=batch_size)
         print(f"     ... {ds_name} stimuli")
-        classes, ac = get_activations(model, ds_loader, layer_names, device='cuda')
+        classes, ac = get_activations(model, ds_loader, layer_names, state=cstate, device='cuda')
         activations[ds_name] = ac
 
     # taken from https://github.com/cJarvers/shapebias/blob/main/experiments/rsa_analysis.py
@@ -200,11 +213,14 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--batchsize', type=int, default=16)
     parser.add_argument("--method", type=str, default="fixed",
                         help="How to compare RDMs. Can be 'fixed' (no weighting, use rho-a) or 'weighted' (weighted models, use corr).")
+    parser.add_argument("--state", type=str, default="hidden",
+                        help="On Networks with two states, select the one you want.")
     parser.add_argument("--show_rdms", action="store_true",
                         help="If true, shows plot of RDMs (and pauses script halfway).")
     args = parser.parse_args()
 
-    save_data = main(args.datasets, args.path, args.set, args.method, args.cell_type, args.cell_kernel, args.time_steps,
+    save_data = main(args.datasets, args.path, args.set, args.method, args.state, args.cell_type, args.cell_kernel,
+                     args.time_steps,
                      args.weights, args.batchsize, args.norm, args.drop,
                      show_rdms=args.show_rdms)
 

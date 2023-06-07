@@ -5,6 +5,8 @@ import torchvision.transforms as tfs
 import torchvision.transforms.functional as F
 
 from scipy.ndimage import binary_dilation, gaussian_filter
+from datasets.pascal_voc import PascalVoc
+import matplotlib.pyplot as plt
 
 
 class FillOutMask:
@@ -45,8 +47,11 @@ class EnlargeAndCropBoundingBox:
     def __call__(self, image, bbox):
         x, y, w, h = bbox
 
-        new_w = w * self.factor
-        new_h = h * self.factor
+        img_width, img_height = image.size
+
+        # Make sure the new bounding box is not bigger than the original image
+        new_w = min(img_width, w * self.factor)
+        new_h = min(img_height, h * self.factor)
 
         new_x = max(0, x - (new_w - w) / 2)
         new_y = max(0, y - (new_h - h) / 2)
@@ -55,6 +60,9 @@ class EnlargeAndCropBoundingBox:
         img_width, img_height = image.size
         new_x = min(new_x, img_width - new_w)
         new_y = min(new_y, img_height - new_h)
+
+        new_w = min(new_w, img_width - new_x)
+        new_h = min(new_h, img_height - new_y)
 
         # Crop the image
         cropped_image = F.crop(image, int(new_y), int(new_x), int(new_h), int(new_w))
@@ -131,9 +139,8 @@ class MyCompose(object):
         return state
 
 
-mean=[0.485, 0.456, 0.406]
-std=[0.229, 0.224, 0.225]
-
+mean = [0.485, 0.456, 0.406]
+std = [0.229, 0.224, 0.225]
 
 DEV_TEST = tfs.Compose([MyCompose([
     DiscardMaskAndBox()
@@ -148,7 +155,8 @@ NORMAL = tfs.Compose([MyCompose([
     tfs.ToTensor(),
     tfs.Resize((224, 224), interpolation=tfs.InterpolationMode.NEAREST),
     tfs.ConvertImageDtype(torch.float32),
-    tfs.Normalize(mean=mean,std=std)])
+    tfs.Normalize(mean=mean, std=std)
+])
 
 FOREGROUND = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
@@ -158,8 +166,8 @@ FOREGROUND = tfs.Compose([MyCompose([
     tfs.ToTensor(),
     tfs.Resize((224, 224), interpolation=tfs.InterpolationMode.NEAREST),
     tfs.ConvertImageDtype(torch.float32),
-    tfs.Normalize(mean=mean,std=std)])
-
+    tfs.Normalize(mean=mean, std=std)
+])
 SHILOUETTE = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
     FillOutMask(inverted=True, fill=255),
@@ -169,8 +177,8 @@ SHILOUETTE = tfs.Compose([MyCompose([
     tfs.ToTensor(),
     tfs.Resize((224, 224), interpolation=tfs.InterpolationMode.NEAREST),
     tfs.ConvertImageDtype(torch.float32),
-    tfs.Normalize(mean=mean,std=std)])
-
+    tfs.Normalize(mean=mean, std=std)
+])
 FRANKENSTEIN = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
     FillOutMask(inverted=True, fill=255),
@@ -181,7 +189,7 @@ FRANKENSTEIN = tfs.Compose([MyCompose([
     FrankensteinFlip(),
     tfs.ToTensor(),
     tfs.ConvertImageDtype(torch.float32),
-    tfs.Normalize(mean=mean,std=std)])
+    tfs.Normalize(mean=mean, std=std)])
 
 SERRATED = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
@@ -193,4 +201,70 @@ SERRATED = tfs.Compose([MyCompose([
     tfs.ToTensor(),
     tfs.Resize((224, 224), interpolation=tfs.InterpolationMode.NEAREST),
     tfs.ConvertImageDtype(torch.float32),
-    tfs.Normalize(mean=mean,std=std)])
+    tfs.Normalize(mean=mean, std=std)
+])
+
+
+def avg(a):
+    return sum(a) / len(a)
+
+
+def calculate_mean_and_std(image_ds):
+    images = [np.array(img) for img, _ in image_ds]
+    means, std_devs = zip(*[(np.mean(img), np.std(img)) for img in images])
+
+    mean = avg(means)
+    std_dev = avg(std_devs)
+    return mean, std_dev
+
+
+def plot_images(image_ds, out_file, nof_cols=10, nof_images=100):
+    # images = [img for img, _ in image_ds[:nof_images]]
+    images = []
+    for idx, (img, _) in enumerate(image_ds):
+        if idx >= nof_images:
+            break
+        else:
+            images.append(img)
+
+    fig = plt.figure(figsize=(50, 50))
+    n_rows = len(images) // nof_cols + 1
+    for idx, img in enumerate(images, 1):
+        a = fig.add_subplot(n_rows, nof_cols, idx)
+        a.imshow(img)
+        a.axis('off')
+
+    fig.savefig(out_file)
+
+
+def check_pascal_voc_images(path_to_dataset):
+    non_processed_ds = PascalVoc(path_to_dataset, 'trainval', transform=MyCompose([DiscardMaskAndBox()]))
+    cropped_ds = PascalVoc(path_to_dataset, 'trainval',
+                           transform=MyCompose([EnlargeImageAndMask(), DiscardMaskAndBox()]))
+    foreground_ds = PascalVoc(path_to_dataset, 'trainval',
+                              transform=MyCompose(
+                                  [EnlargeImageAndMask(),
+                                   FillOutMask(inverted=True, fill=255),
+                                   DiscardMaskAndBox()]))
+
+    mean, std_dev = calculate_mean_and_std(non_processed_ds)
+
+    plot_images(non_processed_ds, 'non_processed.pdf')
+
+    print(f'Non Processed... Mean: {mean}, Standard Deviation: {std_dev}')
+
+    mean, std_dev = calculate_mean_and_std(cropped_ds)
+
+    plot_images(cropped_ds, 'cropped.pdf')
+
+    print(f'Cropped... Mean: {mean}, Standard Deviation: {std_dev}')
+
+    mean, std_dev = calculate_mean_and_std(foreground_ds)
+
+    plot_images(foreground_ds, 'foreground.pdf')
+
+    print(f'Foreground... Mean: {mean}, Standard Deviation: {std_dev}')
+
+
+if __name__ == '__main__':
+    check_pascal_voc_images('S:\datasets\pascal_voc')
