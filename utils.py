@@ -138,7 +138,7 @@ class ModelFileContext:
                 try:
                     best_optim_file = f'{prefix}-ep{best_checkpoint}.optim'
                     print(f'Try loading optimizer from {best_optim_file}')
-                    optim_state = torch.load(best_checkpoint_file)
+                    optim_state = torch.load(best_optim_file)
                     self.optim.load_state_dict(optim_state)
                     print(f'Loaded optimizer state from {best_optim_file}')
                     loaded_optimizer = True
