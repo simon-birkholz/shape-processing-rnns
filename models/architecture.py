@@ -92,6 +92,60 @@ class ConvWrapper(torch.nn.Module):
         return out
 
 
+class hGRUWrapper(torch.nn.Module):
+
+    def __init__(self, in_channels: int,
+                 out_channels: int,
+                 kernel: KernelArg,
+                 stride: KernelArg,
+                 activation,
+                 normalization,
+                 *,
+                 timesteps,
+                 do_preconv=True):
+        super(hGRUWrapper, self).__init__()
+        self.do_preconv = do_preconv
+
+        if do_preconv:
+            self.conv = get_maybe_padded_conv(in_channels, out_channels, kernel, stride)
+            self.hgru = hgru_cell.hGRUCell(out_channels, out_channels, kernel, normalization, timesteps=timesteps)
+        else:
+            self.hgru = hgru_cell.hGRUCell(in_channels, out_channels, kernel, normalization, timesteps=timesteps)
+
+    def forward(self, x, hx=None, t=0):
+        if self.do_preconv:
+            x = self.conv(x)
+        out, _ = self.hgru(x, hx, timestep=t)
+        return out
+
+
+class fGRUWrapper(torch.nn.Module):
+
+    def __init__(self, in_channels: int,
+                 out_channels: int,
+                 kernel: KernelArg,
+                 stride: KernelArg,
+                 activation,
+                 normalization,
+                 *,
+                 timesteps,
+                 do_preconv=True):
+        super(fGRUWrapper, self).__init__()
+        self.do_preconv = do_preconv
+
+        if do_preconv:
+            self.conv = get_maybe_padded_conv(in_channels, out_channels, kernel, stride)
+            self.fgru = fgru_cell.fGRUCell(out_channels, out_channels, kernel, normalization, timesteps=timesteps)
+        else:
+            self.fgru = fgru_cell.fGRUCell(in_channels, out_channels, kernel, normalization, timesteps=timesteps)
+
+    def forward(self, x, hx=None, t=0):
+        if self.do_preconv:
+            x = self.conv(x)
+        out, _ = self.fgru(x, hx, timestep=t)
+        return out
+
+
 NORMAL_FILTERS = [64, 128, 256, 256, 512]
 NORMAL_POOLS = [True, True, True, True, True]
 
@@ -145,11 +199,11 @@ class FeedForwardTower(torch.nn.Module):
             def get_cell(*args, **kwargs):
                 return ReciprocalGatedCell(*args, do_preconv=self.do_preconv, **kwargs)
         elif self.cell_type == 'hgru':
-            def get_cell(ins, outs, ks, ss, ac, nn, **kwargs):
-                return hgru_cell.hGRUCell(ins, outs, ks, nn, timesteps=time_steps, **kwargs)
+            def get_cell(*args, **kwargs):
+                return hGRUWrapper(*args, timesteps=time_steps, do_preconv=self.do_preconv, **kwargs)
         elif self.cell_type == 'fgru':
             def get_cell(*args, **kwargs):
-                return fgru_cell.fGRUCell(*args, **kwargs)
+                return hGRUWrapper(*args, timesteps=time_steps, do_preconv=self.do_preconv, **kwargs)
         else:
             raise ValueError('Unknown ConvRNN cell type')
 
@@ -203,7 +257,7 @@ class FeedForwardTower(torch.nn.Module):
 
         self.dropout = SpatialDropout(p=dropout)
 
-        if self.cell_type in ['conv', 'rnn', 'gru', 'hgru']:
+        if self.cell_type in ['conv', 'rnn', 'gru', 'hgru', 'fgru']:
             self.get_x = lambda out: out
         elif self.cell_type in ['lstm', 'reciprocal']:
             def get_x(x):
