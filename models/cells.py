@@ -271,13 +271,14 @@ class ReciprocalGatedCell(torch.nn.Module):
         self.kernel_size = kernel_size
         self.stride = stride
         self.do_preconv = do_preconv
-        self.norm = get_maybe_normalization(normalization, out_channels)
+        self.norm1 = get_maybe_normalization(normalization, out_channels)
+        self.norm2 = get_maybe_normalization(normalization, out_channels)
 
         # employ a convolution before the reciprocal gated cell because the input gets gated by the hidden state, unlike all other cells
-
-        self.preconv = get_maybe_padded_conv(in_channels=in_channels, out_channels=out_channels,
-                                             kernel_size=kernel_size,
-                                             stride=stride)
+        if self.do_preconv:
+            self.preconv = get_maybe_padded_conv(in_channels=in_channels, out_channels=out_channels,
+                                                 kernel_size=kernel_size,
+                                                 stride=stride)
 
         # output gating
         self.wch = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size,
@@ -306,19 +307,37 @@ class ReciprocalGatedCell(torch.nn.Module):
         else:
             h_cur, c_cur = hidden_state
 
-        x = self.preconv(input)
+        if self.do_preconv:
+            x = self.preconv(input)
+        else:
+            x = input
 
-        # output gating
-        h_next = (1 - F.sigmoid(self.wch(c_cur))) * x + (1 - F.sigmoid(self.whh(h_cur))) * h_cur
-        h_next = self.activation(h_next)
+        if self.do_preconv:
+            # output gating
+            h_next = (1 - F.sigmoid(self.wch(c_cur))) * x + (1 - F.sigmoid(self.whh(h_cur))) * h_cur
+            h_next = self.activation(h_next)
 
-        # h_next = F.tanh(h_next)
+            # memory gating
+            c_next = (1 - F.sigmoid(self.whc(h_cur))) * x + (1 - F.sigmoid(self.wcc(c_cur))) * c_cur
+            c_next = self.activation(c_next)
+        else:
+            # whacky work-around
+            if self.in_channels < self.out_channels:
+                whack = torch.cat((x, x), 1)
+            else:
+                whack = x[:,:self.out_channels,:,:]
 
-        # memory gating
-        c_next = (1 - F.sigmoid(self.whc(h_cur))) * x + (1 - F.sigmoid(self.wcc(c_cur))) * c_cur
-        c_next = self.activation(c_next)
+                # output gating
+            h_next = (1 - F.sigmoid(self.wch(c_cur))) * whack + (1 - F.sigmoid(self.whh(h_cur))) * h_cur
+            h_next = self.activation(h_next)
 
-        if self.norm:
-            h_next = self.norm(h_next)
+            # memory gating
+            c_next = (1 - F.sigmoid(self.whc(h_cur))) * whack + (1 - F.sigmoid(self.wcc(c_cur))) * c_cur
+            c_next = self.activation(c_next)
+
+        if self.norm1:
+            h_next = self.norm1(h_next)
+        if  self.norm2:
+            c_next = self.norm2(c_next)
 
         return h_next, c_next
