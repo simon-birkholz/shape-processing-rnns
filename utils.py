@@ -112,13 +112,14 @@ def remove_extension(path: Path)-> str:
 
 class ModelFileContext:
 
-    def __init__(self, network: torch.nn.Module, optim: torch.optim.Optimizer, outpath: str, do_reload=True, interval=5):
+    def __init__(self, network: torch.nn.Module, optim: torch.optim.Optimizer, outpath: str, do_reload=True, interval=5, device='cuda'):
         self.network = network
         self.optim = optim
         self.outpath = Path(outpath)
         self.do_reload = do_reload
         self.checkpoints = []
         self.interval = interval
+        self.device = device
 
     def __enter__(self):
         info_file = Path(f'{remove_extension(self.outpath)}.info')
@@ -134,6 +135,7 @@ class ModelFileContext:
             print(f'Loading model from {best_checkpoint_file}')
             state = torch.load(best_checkpoint_file)
             self.network.load_state_dict(state)
+            self.network.to(self.device)
             if self.optim is not None:
                 try:
                     best_optim_file = f'{prefix}-ep{best_checkpoint}.optim'

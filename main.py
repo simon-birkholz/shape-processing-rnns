@@ -206,7 +206,7 @@ def learn(dataset: str,
 
     loss = nn.CrossEntropyLoss()
 
-    with ModelFileContext(network, opti, save_dir) as (save_cb, loaded_epoch, loaded_optim):
+    with ModelFileContext(network, opti, save_dir, device='cuda') as (save_cb, loaded_epoch, loaded_optim):
         train(network, opti, loss, train_data_loader, val_data_loader, batch_frag=batch_frag,
               device='cuda', save_cb=save_cb, start_epoch=loaded_epoch, loaded_optim=loaded_optim, **train_config)
 
