@@ -290,3 +290,8 @@ wandb
 /config1.json
 /config2.json
 /output
+/figures
+/results/rsa
+/results/stimuli
+/bw_cluster_weights
+/results/imagenetval

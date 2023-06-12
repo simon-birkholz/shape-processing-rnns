@@ -8,17 +8,18 @@ import collections.abc as abc
 def get_model_complexities(cell_types, tower_type):
     result = []
     for cell in cell_types:
-        model = FeedForwardTower(tower_type=tower_type, cell_type=cell, cell_kernel=3)
+
+        model = FeedForwardTower(tower_type=tower_type, cell_type=cell, cell_kernel=3, do_preconv=True)
         pCount = sum(p.numel() for p in model.parameters())
         result.append(pCount)
     return result
 
 
-#ACC = {'conv': 0.4538, 'rnn': {3: 0.5222, 5: 0.5429, 7: 0.5575, 9: 0.5644, 11: 0.5697, 13: 0.572, 15: 0.5726},
+# ACC = {'conv': 0.4538, 'rnn': {3: 0.5222, 5: 0.5429, 7: 0.5575, 9: 0.5644, 11: 0.5697, 13: 0.572, 15: 0.5726},
 #       'reciprocal': {3: 0.5262, 5: 0.5327}}
 
 ACC = {'conv': 0.4538, 'rnn': {3: 0.5222, 7: 0.5575, 11: 0.5697, 15: 0.5726},
-       'reciprocal': {3: 0.5262}}
+       'reciprocal': {3: 0.5262}, 'gru': {3: 0.5285}, 'hgru': {3: 0.5461} , 'fgru' : {3 : 0.5517}}
 
 if __name__ == '__main__':
     model_params = {k: get_model_complexities([k], 'normal')[0] for k in ACC.keys()}
@@ -50,7 +51,7 @@ if __name__ == '__main__':
 
     plt.xlim(4, 35)
     plt.ylim(0.45, 0.65)
-    plt.xlabel('Number of Parameters x10^6')
+    plt.xlabel('Number of Parameters x$10^6$')
     plt.ylabel('Accuracy on Imagenet')
     # plt.legend()
     plt.savefig('../figures/model-complexity-acc.png')

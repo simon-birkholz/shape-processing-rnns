@@ -139,8 +139,20 @@ class MyCompose(object):
         return state
 
 
+class NoneTransform(object):
+    """ Does nothing to the image, to be used instead of None
+
+    Args:
+        image in, image out, nothing is done
+    """
+
+    def __call__(self, image):
+        return image
+
 mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]
+
+DO_NORM = False
 
 DEV_TEST = tfs.Compose([MyCompose([
     DiscardMaskAndBox()
@@ -155,7 +167,7 @@ NORMAL = tfs.Compose([MyCompose([
     tfs.ToTensor(),
     tfs.Resize((224, 224), interpolation=tfs.InterpolationMode.NEAREST),
     tfs.ConvertImageDtype(torch.float32),
-    tfs.Normalize(mean=mean, std=std)
+    tfs.Normalize(mean=mean, std=std) if DO_NORM else NoneTransform()
 ])
 
 FOREGROUND = tfs.Compose([MyCompose([
@@ -166,7 +178,7 @@ FOREGROUND = tfs.Compose([MyCompose([
     tfs.ToTensor(),
     tfs.Resize((224, 224), interpolation=tfs.InterpolationMode.NEAREST),
     tfs.ConvertImageDtype(torch.float32),
-    tfs.Normalize(mean=mean, std=std)
+    tfs.Normalize(mean=mean, std=std) if DO_NORM else NoneTransform()
 ])
 SHILOUETTE = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
@@ -177,7 +189,7 @@ SHILOUETTE = tfs.Compose([MyCompose([
     tfs.ToTensor(),
     tfs.Resize((224, 224), interpolation=tfs.InterpolationMode.NEAREST),
     tfs.ConvertImageDtype(torch.float32),
-    tfs.Normalize(mean=mean, std=std)
+    tfs.Normalize(mean=mean, std=std) if DO_NORM else NoneTransform()
 ])
 FRANKENSTEIN = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
@@ -189,7 +201,8 @@ FRANKENSTEIN = tfs.Compose([MyCompose([
     FrankensteinFlip(),
     tfs.ToTensor(),
     tfs.ConvertImageDtype(torch.float32),
-    tfs.Normalize(mean=mean, std=std)])
+    tfs.Normalize(mean=mean, std=std) if DO_NORM else NoneTransform()
+])
 
 SERRATED = tfs.Compose([MyCompose([
     EnlargeImageAndMask(),
@@ -201,7 +214,7 @@ SERRATED = tfs.Compose([MyCompose([
     tfs.ToTensor(),
     tfs.Resize((224, 224), interpolation=tfs.InterpolationMode.NEAREST),
     tfs.ConvertImageDtype(torch.float32),
-    tfs.Normalize(mean=mean, std=std)
+    tfs.Normalize(mean=mean, std=std) if DO_NORM else NoneTransform()
 ])
 
 
