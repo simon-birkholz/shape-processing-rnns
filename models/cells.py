@@ -260,7 +260,8 @@ class ReciprocalGatedCell(torch.nn.Module):
                  stride: KernelArg,
                  activation,
                  normalization,
-                 do_preconv: bool = True):
+                 do_preconv: bool = True,
+                 preconv_kernel: KernelArg = 3):
         super().__init__()
         if not do_preconv and stride != 1:
             raise AttributeError(
@@ -271,13 +272,14 @@ class ReciprocalGatedCell(torch.nn.Module):
         self.kernel_size = kernel_size
         self.stride = stride
         self.do_preconv = do_preconv
+        self.preconv_kernel = preconv_kernel
         self.norm1 = get_maybe_normalization(normalization, out_channels)
         self.norm2 = get_maybe_normalization(normalization, out_channels)
 
         # employ a convolution before the reciprocal gated cell because the input gets gated by the hidden state, unlike all other cells
         if self.do_preconv:
             self.preconv = get_maybe_padded_conv(in_channels=in_channels, out_channels=out_channels,
-                                                 kernel_size=kernel_size,
+                                                 kernel_size=self.preconv_kernel,
                                                  stride=stride)
 
         # output gating

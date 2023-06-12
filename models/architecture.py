@@ -102,12 +102,13 @@ class hGRUWrapper(torch.nn.Module):
                  normalization,
                  *,
                  timesteps,
-                 do_preconv=True):
+                 do_preconv=True,
+                 preconv_kernel: KernelArg = 1):
         super(hGRUWrapper, self).__init__()
         self.do_preconv = do_preconv
 
         if do_preconv:
-            self.conv = get_maybe_padded_conv(in_channels, out_channels, kernel, stride)
+            self.conv = get_maybe_padded_conv(in_channels, out_channels, preconv_kernel, stride)
             self.hgru = hgru_cell.hGRUCell(out_channels, out_channels, kernel, normalization, timesteps=timesteps)
         else:
             self.hgru = hgru_cell.hGRUCell(in_channels, out_channels, kernel, normalization, timesteps=timesteps)
@@ -129,12 +130,13 @@ class fGRUWrapper(torch.nn.Module):
                  normalization,
                  *,
                  timesteps,
-                 do_preconv=True):
+                 do_preconv=True,
+                 preconv_kernel: KernelArg = 1):
         super(fGRUWrapper, self).__init__()
         self.do_preconv = do_preconv
 
         if do_preconv:
-            self.conv = get_maybe_padded_conv(in_channels, out_channels, kernel, stride)
+            self.conv = get_maybe_padded_conv(in_channels, out_channels, preconv_kernel, stride)
             self.fgru = fgru_cell.fGRUCell(out_channels, out_channels, kernel, normalization, timesteps=timesteps)
         else:
             self.fgru = fgru_cell.fGRUCell(in_channels, out_channels, kernel, normalization, timesteps=timesteps)
@@ -169,6 +171,7 @@ class FeedForwardTower(torch.nn.Module):
                  dropout_recurrent: bool = False,
                  skip_first: bool = False,
                  do_preconv: bool = True,
+                 preconv_kernel: KernelArg = 3,
                  **kwargs):
         super().__init__()
         for k, v in kwargs.items():
@@ -179,6 +182,7 @@ class FeedForwardTower(torch.nn.Module):
         self.time_steps = time_steps
         self.skip_first = skip_first
         self.do_preconv = do_preconv
+        self.preconv_kernel = preconv_kernel
         self.dropout_recurrent = dropout_recurrent
 
         if self.cell_type == 'conv':
@@ -197,13 +201,16 @@ class FeedForwardTower(torch.nn.Module):
                 return ConvLSTMCell(*args, **kwargs)
         elif self.cell_type == 'reciprocal':
             def get_cell(*args, **kwargs):
-                return ReciprocalGatedCell(*args, do_preconv=self.do_preconv, **kwargs)
+                return ReciprocalGatedCell(*args, do_preconv=self.do_preconv, preconv_kernel=self.preconv_kernel,
+                                           **kwargs)
         elif self.cell_type == 'hgru':
             def get_cell(*args, **kwargs):
-                return hGRUWrapper(*args, timesteps=time_steps, do_preconv=self.do_preconv, **kwargs)
+                return hGRUWrapper(*args, timesteps=time_steps, do_preconv=self.do_preconv,
+                                   preconv_kernel=self.preconv_kernel, **kwargs)
         elif self.cell_type == 'fgru':
             def get_cell(*args, **kwargs):
-                return hGRUWrapper(*args, timesteps=time_steps, do_preconv=self.do_preconv, **kwargs)
+                return hGRUWrapper(*args, timesteps=time_steps, do_preconv=self.do_preconv,
+                                   preconv_kernel=self.preconv_kernel, **kwargs)
         else:
             raise ValueError('Unknown ConvRNN cell type')
 

@@ -5,7 +5,7 @@ EXT="png"
 
 # plot diagnostic stimuli plots (normalized)
 
-python plot_diagnostic_stimuli.py -f ../results/stimuli/2023-06-05-04-35_stimuli_conv.pt -o diagnostic_stimuli_conv.$EXT --fdr $Q -n "Conv"
+python plot_diagnostic_stimuli.py -f ../results/stimuli/2023-06-05-04-35_stimuli_conv.pt -o diagnostic_stimuli_conv_normalized.$EXT --fdr $Q -n "Conv"
 
 python plot_diagnostic_stimuli.py -f ../results/stimuli/2023-06-05-04-14_stimuli_rnn-ts3-ro3.pt -o diagnostic_stimuli_rnn_normalized.$EXT --fdr $Q -n "RNN (T=3)"
 
