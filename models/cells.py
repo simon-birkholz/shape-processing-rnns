@@ -175,7 +175,8 @@ class ConvLSTMCell(torch.nn.Module):
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.stride = stride
-        self.norm = get_maybe_normalization(normalization, out_channels)
+        self.norm1 = get_maybe_normalization(normalization, out_channels)
+        self.norm2 = get_maybe_normalization(normalization, out_channels)
         self.activation = activation
 
         # reset/forget gate
@@ -246,9 +247,10 @@ class ConvLSTMCell(torch.nn.Module):
         # TODO support different activation functions
         h_next = output_gate * F.tanh(c_next)
 
-        if self.norm:
-            h_next = self.norm(h_next)
-
+        if self.norm1:
+            h_next = self.norm1(h_next)
+        if self.norm2:
+            c_next = self.norm2(c_next)
         return h_next, c_next
 
 
