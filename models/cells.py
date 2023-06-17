@@ -296,50 +296,36 @@ class ReciprocalGatedCell(torch.nn.Module):
 
     def forward(self, input, hidden_state=None, t=0):
 
-        if hidden_state is None:
-            if self.stride == 1:
-                os1 = input.size(2)
-                os2 = input.size(3)
-            else:
-                os1 = calculate_output_dimension(input.size(2), self.kernel_size, 0, self.stride)
-                os2 = calculate_output_dimension(input.size(3), self.kernel_size, 0, self.stride)
-
-            h_cur = Variable(input.new_zeros(input.size(0), self.out_channels, os1, os2))
-            c_cur = Variable(input.new_zeros(input.size(0), self.out_channels, os1, os2))
-        else:
-            h_cur, c_cur = hidden_state
-
         if self.do_preconv:
             x = self.preconv(input)
         else:
             x = input
 
-        if self.do_preconv:
-            # output gating
-            h_next = (1 - F.sigmoid(self.wch(c_cur))) * x + (1 - F.sigmoid(self.whh(h_cur))) * h_cur
-            h_next = self.activation(h_next)
-
-            # memory gating
-            c_next = (1 - F.sigmoid(self.whc(h_cur))) * x + (1 - F.sigmoid(self.wcc(c_cur))) * c_cur
-            c_next = self.activation(c_next)
-        else:
-            # whacky work-around
-            if self.in_channels < self.out_channels:
-                whack = torch.cat((x, x), 1)
+        if hidden_state is None:
+            if self.stride == 1:
+                os1 = x.size(2)
+                os2 = x.size(3)
             else:
-                whack = x[:,:self.out_channels,:,:]
+                os1 = calculate_output_dimension(x.size(2), self.kernel_size, 0, self.stride)
+                os2 = calculate_output_dimension(x.size(3), self.kernel_size, 0, self.stride)
 
-                # output gating
-            h_next = (1 - F.sigmoid(self.wch(c_cur))) * whack + (1 - F.sigmoid(self.whh(h_cur))) * h_cur
-            h_next = self.activation(h_next)
+            h_cur = Variable(x.new_zeros(x.size(0), self.out_channels, os1, os2))
+            c_cur = Variable(x.new_zeros(x.size(0), self.out_channels, os1, os2))
+        else:
+            h_cur, c_cur = hidden_state
 
-            # memory gating
-            c_next = (1 - F.sigmoid(self.whc(h_cur))) * whack + (1 - F.sigmoid(self.wcc(c_cur))) * c_cur
-            c_next = self.activation(c_next)
+        # output gating
+        h_next = (1 - F.sigmoid(self.wch(c_cur))) * x + (1 - F.sigmoid(self.whh(h_cur))) * h_cur
+        h_next = self.activation(h_next)
+
+        # memory gating
+        c_next = (1 - F.sigmoid(self.whc(h_cur))) * x + (1 - F.sigmoid(self.wcc(c_cur))) * c_cur
+        c_next = self.activation(c_next)
+
 
         if self.norm1:
             h_next = self.norm1(h_next)
-        if  self.norm2:
+        if self.norm2:
             c_next = self.norm2(c_next)
 
         return h_next, c_next
