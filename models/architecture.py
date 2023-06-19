@@ -321,6 +321,7 @@ class FeedForwardTower(torch.nn.Module):
 
 class GammaNetWrapper(torch.nn.Module):
     def __init__(self,
+                 tower_type: str = 'normal',
                  num_classes: int = 1000,
                  time_steps: int = 1,
                  **kwargs):
@@ -328,7 +329,30 @@ class GammaNetWrapper(torch.nn.Module):
         for k, v in kwargs.items():
             print(f"Unknown Parameter {k}:{v}")
         self.time_steps = time_steps
-        self.network = serrelabmodels.gamanet.BaseGN(timesteps=time_steps)
+
+        if tower_type == 'normal':
+            self.network = serrelabmodels.gamanet.BaseGN(timesteps=time_steps)
+        elif tower_type == 'small':
+            vgg_small = {
+                'name': 'vgg_16',
+                'import_prepath': 'serrelabmodels.models.vgg_16',
+                'import_class': 'VGG_Small',
+                'args': {
+                    'weight_path': '/media/data_cifs/model_weights/vgg16.pth',
+                    'load_weights': False,
+                    'freeze_layers': False,
+                    'n_layers': 10
+                }
+            }
+            gn_params_small = [['conv2', 3],
+                               ['conv3', 3],
+                               ['conv4', 3],
+                               ['conv5', 1],
+                               ['conv4', 1],
+                               ['conv3', 1],
+                               ['conv2', 1]]
+            self.network = serrelabmodels.gamanet.BaseGN(base_ff=vgg_small, gn_params=gn_params_small,
+                                                         timesteps=time_steps)
         self.num_classes = num_classes
 
         self.flatten = nn.Flatten()
