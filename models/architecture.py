@@ -285,12 +285,15 @@ class FeedForwardTower(torch.nn.Module):
 
     def forward(self, input,
                 return_hidden=False,
+                return_all=False,
                 time_steps=-1):
         if time_steps == -1:
             time_steps = self.time_steps
 
         x = input
         hidden = [None] * len(self.cell_blocks)
+
+        activations = []
         dropout_mask = None
         for t in range(0, time_steps):
             x = input
@@ -306,18 +309,30 @@ class FeedForwardTower(torch.nn.Module):
             if self.dropout_recurrent:
                 hidden[-1], dropout_mask = self.dropout(hidden[-1], dropout_mask)
 
-        if self.dropout_recurrent:
-            x, _ = self.dropout(x, self.pooling(dropout_mask))
+
+            if return_all:
+                if self.dropout_recurrent:
+                    x, _ = self.dropout(x, self.pooling(dropout_mask))
+                else:
+                    x, _ = self.dropout(x, dropout_mask)
+                x = self.last_conv(x)
+                x = self.flatten(x)
+                activations.append(x)
+
+        if not return_all:
+            if self.dropout_recurrent:
+                x, _ = self.dropout(x, self.pooling(dropout_mask))
+            else:
+                x, _ = self.dropout(x, dropout_mask)
+            x = self.last_conv(x)
+            x = self.flatten(x)
+
+            if return_hidden:
+                return x, hidden
+
+            return x
         else:
-            x, _ = self.dropout(x, dropout_mask)
-        x = self.last_conv(x)
-        x = self.flatten(x)
-
-        if return_hidden:
-            return x, hidden
-
-        return x
-
+            return activations
 
 class GammaNetWrapper(torch.nn.Module):
     def __init__(self,
@@ -360,6 +375,7 @@ class GammaNetWrapper(torch.nn.Module):
 
     def forward(self, input,
                 return_hidden=False,
+                return_all=False,
                 time_steps=-1):
         hidden = None
         if time_steps == -1:

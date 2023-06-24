@@ -9,22 +9,11 @@ import datetime
 
 import numpy as np
 import argparse
-
+from tqdm import tqdm
 from typing import List
 
 from datasets.ffcv_utils import loader_ffcv_dataset
 from models.architecture import FeedForwardTower
-
-
-def permutation_test(probs, labels, n=1000):
-    probs = probs.numpy()
-    labels = labels.numpy()
-    results = np.array([np.mean(np.random.permutation(probs) == labels, dtype=np.float32) for _ in range(n)])
-    return results
-
-
-def p_value(random_dist, model_acc):
-    return ((random_dist >= model_acc).sum() + 1) / len(random_dist)
 
 
 def classify(model,
@@ -34,31 +23,33 @@ def classify(model,
     model.to(device)
 
     model.eval()
-    val_correct = 0
-    val_examples = 0
+    val_correct = {t: 0 for t in range(0, time_steps)}
+    val_examples = {t: 0 for t in range(0, time_steps)}
 
     with torch.no_grad():
-        for batch in data_loader:
+        for batch in tqdm(data_loader):
             inputs, targets = batch
             inputs = inputs.to(device)
 
-            outputs = model(inputs, False, time_steps)
-            probabilities = F.softmax(outputs, dim=1)
-            predicted = torch.argmax(probabilities, dim=1)
-            val_correct += torch.sum(predicted == targets).item()
-            val_examples += predicted.shape[0]
+            outputs = model(inputs, False, True, time_steps)
 
-    val_accuracy = (val_correct / val_examples)
+            for idx, output_t in enumerate(outputs):
+                probabilities = F.softmax(output_t, dim=1)
+                predicted = torch.argmax(probabilities, dim=1)
+                val_correct[idx] += torch.sum(predicted == targets).item()
+                val_examples[idx] += predicted.shape[0]
 
-    print(
-        f"     ... {val_accuracy:.2f} accuracy")
+    val_accuracy = {i: (val_correct[i] / val_examples[i]) for i in range(0,time_steps)}
+
+    for i in range(0, time_steps):
+        print(
+            f"     ... T={i+1} {val_accuracy[i]:.2f} accuracy")
 
     return val_accuracy
 
 
 def main(
-
-        dataset_path: str,
+        data_path: str,
         cell_type: str,
         cell_kernel: int,
         time_steps: int,
@@ -67,15 +58,17 @@ def main(
         normalization: str,
         dropout: float,
 ):
-    normal_ds = loader_ffcv_dataset('S:\datasets\imagenet_kaggle_val.beton', 64)
+    normal_ds = loader_ffcv_dataset(data_path, batch_size)
 
     model = FeedForwardTower(tower_type='normal', cell_type=cell_type, cell_kernel=cell_kernel, time_steps=time_steps,
-                             normalization=normalization, dropout=dropout, do_preconv=True)
+                             normalization=normalization, dropout=dropout, do_preconv=True, skip_first=True,
+                             preconv_kernel=1)
 
     state = torch.load(f'../bw_cluster_weights/{weights_file}')
     model.load_state_dict(state)
 
-    accs = [classify(model, normal_ds, t, device='cuda') for t in range(1, 15)]
+    #accs = [classify(model, normal_ds, t, device='cuda') for t in range(1, 16)]
+    accs = [v for k,v in classify(model,normal_ds,15,device='cuda').items()]
 
     print(accs)
     return {

@@ -50,6 +50,8 @@ def get_activations(model,
         outputs, hidden = model(inputs, return_hidden=True)
 
         if model.cell_type in ['reciprocal', 'lstm']:
+            hidden, cell = zip(*hidden)
+            hidden, cell = list(hidden), list(cell)
             if state == 'hidden':
                 hidden, _ = zip(*hidden)
                 hidden = list(hidden)
@@ -106,7 +108,8 @@ def main(
     _, _, imagenet2voc = get_imagenet_class_mapping(dataset_path)
 
     model = FeedForwardTower(tower_type='normal', cell_type=cell_type, cell_kernel=cell_kernel, time_steps=time_steps,
-                             normalization=normalization, dropout=dropout)
+                             normalization=normalization, dropout=dropout, do_preconv=True, skip_first=True,
+                             preconv_kernel=1)
 
     state = torch.load(f'../bw_cluster_weights/{weights_file}')
     model.load_state_dict(state)
