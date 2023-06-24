@@ -77,19 +77,24 @@ class ConvWrapper(torch.nn.Module):
                  kernel: KernelArg,
                  stride: KernelArg,
                  activation,
-                 normalization):
+                 normalization,
+                 double_out=False):
         super(ConvWrapper, self).__init__()
 
         self.conv = get_maybe_padded_conv(in_channels, out_channels, kernel, stride)
         self.norm = get_maybe_normalization(normalization, out_channels)
         self.activation = activation
+        self.double_out = double_out
 
     def forward(self, x, hx=None, t=0):
         out = self.conv(x)
         if self.norm:
             out = self.norm(out)
         out = self.activation(out)
-        return out
+        if self.double_out:
+            return out, out
+        else:
+            return out
 
 
 class hGRUWrapper(torch.nn.Module):
@@ -248,7 +253,7 @@ class FeedForwardTower(torch.nn.Module):
             # perhaps we want to conciously skip the first cell for a normal convolution
             self.cell_blocks = nn.ModuleList(
                 [ConvWrapper(filter_counts[0], filter_counts[1], kernel_sizes[0], stride_sizes[0],
-                             self.activation, normalization)] +
+                             self.activation, normalization, double_out=(cell_type in ['reciprocal', 'lstm']))] +
                 [get_cell(ins, outs, ks, ss, self.activation, normalization) for (ins, outs), ks, ss in
                  zip(pairwise(filter_counts[1:]), kernel_sizes[1:], stride_sizes[1:])])
         else:
@@ -309,7 +314,6 @@ class FeedForwardTower(torch.nn.Module):
             if self.dropout_recurrent:
                 hidden[-1], dropout_mask = self.dropout(hidden[-1], dropout_mask)
 
-
             if return_all:
                 if self.dropout_recurrent:
                     x, _ = self.dropout(x, self.pooling(dropout_mask))
@@ -333,6 +337,7 @@ class FeedForwardTower(torch.nn.Module):
             return x
         else:
             return activations
+
 
 class GammaNetWrapper(torch.nn.Module):
     def __init__(self,

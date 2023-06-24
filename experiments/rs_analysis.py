@@ -26,12 +26,14 @@ torch.set_grad_enabled(False)
 def get_activations(model,
                     data_loader,
                     layer_names: List[str],
-                    state: str,
+                    state_names: List[str],
                     device: str = 'cpu'):
     model.to(device)
     model.eval()
-
-    all_layers = layer_names + ['image', 'label']
+    if model.cell_type in ['reciprocal', 'lstm']:
+        all_layers = layer_names + state_names + ['image', 'label']
+    else:
+        all_layers = layer_names + ['image', 'label']
 
     classes = []
     flatten = torch.nn.Flatten()
@@ -52,17 +54,13 @@ def get_activations(model,
         if model.cell_type in ['reciprocal', 'lstm']:
             hidden, cell = zip(*hidden)
             hidden, cell = list(hidden), list(cell)
-            if state == 'hidden':
-                hidden, _ = zip(*hidden)
-                hidden = list(hidden)
-            elif state == 'cell':
-                _, hidden = zip(*hidden)
-                hidden = list(hidden)
-            else:
-                raise ValueError(f'Unknown cell state {state}')
 
         for layer_name, layer_state in zip(layer_names, hidden):
             activations[layer_name].append(flatten(layer_state).cpu().detach().numpy())
+
+        if model.cell_type in ['reciprocal', 'lstm']:
+            for cell_name, cell_state in zip(state_names, cell):
+                activations[cell_name].append(flatten(cell_state).cpu().detach().numpy())
 
     # concatenate all captured activations
     for layer in all_layers:
@@ -78,7 +76,6 @@ def main(
         dataset_path: str,
         set: str,
         method: str,
-        cstate: str,
         cell_type: str,
         cell_kernel: int,
         time_steps: int,
@@ -98,8 +95,13 @@ def main(
                          (frankenstein_ds, 'frankenstein'), (serrated_ds, 'serrated')]
 
     layer_names = [f'hidden{i + 1}' for i in range(5)]
-    all_layers = layer_names + ['image', 'label']
-    comparison_layers = ["image"] + layer_names
+    cell_names = [f'cell{i + 1}' for i in range(5)]
+    if cell_type in ['reciprocal', 'lstm']:
+        all_layers = layer_names + cell_names + ['image', 'label']
+        comparison_layers = ["image"] + layer_names + cell_names
+    else:
+        all_layers = layer_names + ['image', 'label']
+        comparison_layers = ["image"] + layer_names
 
     all_datasets_full = [(ds, ds_name) for ds, ds_name in all_datasets_full if ds_name in datasets]
     all_datasets = [ds_name for _, ds_name in all_datasets_full]
@@ -120,7 +122,7 @@ def main(
     for ds, ds_name in all_datasets_full:
         ds_loader = data.DataLoader(ds, batch_size=batch_size)
         print(f"     ... {ds_name} stimuli")
-        classes, ac = get_activations(model, ds_loader, layer_names, state=cstate, device='cuda')
+        classes, ac = get_activations(model, ds_loader, layer_names, state_names=cell_names, device='cuda')
         activations[ds_name] = ac
 
     # taken from https://github.com/cJarvers/shapebias/blob/main/experiments/rsa_analysis.py
@@ -216,13 +218,11 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--batchsize', type=int, default=16)
     parser.add_argument("--method", type=str, default="fixed",
                         help="How to compare RDMs. Can be 'fixed' (no weighting, use rho-a) or 'weighted' (weighted models, use corr).")
-    parser.add_argument("--state", type=str, default="hidden",
-                        help="On Networks with two states, select the one you want.")
     parser.add_argument("--show_rdms", action="store_true",
                         help="If true, shows plot of RDMs (and pauses script halfway).")
     args = parser.parse_args()
 
-    save_data = main(args.datasets, args.path, args.set, args.method, args.state, args.cell_type, args.cell_kernel,
+    save_data = main(args.datasets, args.path, args.set, args.method, args.cell_type, args.cell_kernel,
                      args.time_steps,
                      args.weights, args.batchsize, args.norm, args.drop,
                      show_rdms=args.show_rdms)
