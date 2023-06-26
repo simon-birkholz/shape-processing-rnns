@@ -1,28 +1,25 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from typing import List
 
 import numpy as np
 from fdr import fdrcorrection
+from pathlib import Path
 import torch
 
 import argparse
 
-def main(filename: str,
-         modelname: str,
-         out_file: str,
-         fdr: float,
-         show: bool = False):
-    # Load RSA results
-    saved_state = torch.load(filename)
-    comparisons = saved_state["comparisons"]
-    args = saved_state['commandline']
 
-    layer_names = [f'hidden{i + 1}' for i in range(5)]
-
-    comparison_layers = ["image"] + layer_names
-    comparison_ds = [ds for ds in args.datasets if ds != 'normal']
-    all_ds = comparison_ds + ['normal']
-
+def plot_rsa(args,
+             modelname: str,
+             comparison_layers: List[str],
+             comparison_ds,
+             all_ds,
+             comparisons,
+             out_file: str,
+             fdr: float,
+             show: bool = False):
+    plt.figure()
     plt.rcParams.update({
         'font.size': 15,
         'figure.figsize': (8, 5),
@@ -45,7 +42,10 @@ def main(filename: str,
     upper_error = np.concatenate(
         [comparisons[layer].get_ci(0.95, test_type="bootstrap")[1] for layer in comparison_layers]) - heights
     pvals = np.concatenate([c.test_zero(test_type="bootstrap") for c in comparisons.values()])
+    all_layers = [c for c in comparisons.keys()]
     significant = fdrcorrection(pvals, Q=fdr)  # control FDR
+    needed_ps = [all_layers.index(l) * (len(comparison_ds)) + j for i, l in enumerate(comparison_layers) for j in range(len(comparison_ds))]
+    significant = [significant[i] for i in needed_ps]
     colorseq = [mpl.colors.to_rgb(mpl.colors.TABLEAU_COLORS[k]) for k in mpl.colors.TABLEAU_COLORS]
     colors = [colorseq[i] for _ in range(len(comparisons.keys())) for i in range(len(comparison_ds))]
     legend = [mpl.patches.Patch(color=colorseq[i], label=dset) for i, dset in enumerate(comparison_ds)]
@@ -61,6 +61,32 @@ def main(filename: str,
     plt.savefig('../figures/' + out_file)
     if show:
         plt.show()
+
+
+def main(filename: str,
+         modelname: str,
+         out_file: str,
+         fdr: float,
+         show: bool = False):
+    # Load RSA results
+    saved_state = torch.load(filename)
+    comparisons = saved_state["comparisons"]
+    args = saved_state['commandline']
+
+    layer_names = [f'hidden{i + 1}' for i in range(5)]
+    cell_names = [f'cell{i + 1}' for i in range(5)]
+
+    comparison_layers = ["image"] + layer_names
+    if args.cell_type in ['reciprocal', 'lstm']:
+        comparison_layers2 = ["image"] + cell_names
+    comparison_ds = [ds for ds in args.datasets if ds != 'normal']
+    all_ds = comparison_ds + ['normal']
+
+    plot_rsa(args, modelname, comparison_layers, comparison_ds, all_ds, comparisons, out_file, fdr, show)
+    if args.cell_type in ['reciprocal', 'lstm']:
+        out_file2 = Path(out_file).stem + '_cell' + Path(out_file).suffix
+        plot_rsa(args, modelname, comparison_layers2, comparison_ds, all_ds, comparisons, out_file2, fdr, show)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

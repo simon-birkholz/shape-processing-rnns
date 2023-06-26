@@ -81,6 +81,6 @@ def plot_model_complexity_accuracy(data, outfile):
 
 
 if __name__ == '__main__':
-    plot_model_complexity_accuracy(ACC_SINGLE, '../figures/model-complexity-acc.pdf')
+    plot_model_complexity_accuracy(ACC_SINGLE, '../figures/model-complexity-acc.png')
 
-    plot_model_complexity_accuracy(drop_keys(ACC_FULL,'hgru','fgru'), '../figures/model-complexity-acc-full.pdf')
+    plot_model_complexity_accuracy(drop_keys(ACC_FULL,'hgru','fgru'), '../figures/model-complexity-acc-full.png')
