@@ -73,8 +73,14 @@ def main(filename: str,
     comparisons = saved_state["comparisons"]
     args = saved_state['commandline']
 
-    layer_names = [f'hidden{i + 1}' for i in range(5)]
-    cell_names = [f'cell{i + 1}' for i in range(5)]
+    is_gammanet = args.cell_type not in ['conv', 'rnn', 'gru', 'lstm', 'reciprocal', 'fgru', 'hgru']
+
+    if not is_gammanet:
+        del comparisons['hidden1']
+        comparisons.pop('cell1',None)
+
+    layer_names = [f'hidden{i + 1}' for i in range(1 if not is_gammanet else 0,5 if not is_gammanet else 4)]
+    cell_names = [f'cell{i + 1}' for i in range(1 if not is_gammanet else 0,5 if not is_gammanet else 4)]
 
     comparison_layers = ["image"] + layer_names
     if args.cell_type in ['reciprocal', 'lstm']:

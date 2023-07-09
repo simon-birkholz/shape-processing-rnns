@@ -13,7 +13,7 @@ from tqdm import tqdm
 from typing import List
 
 from datasets.ffcv_utils import loader_ffcv_dataset
-from models.architecture import FeedForwardTower
+from models.architecture import FeedForwardTower, GammaNetWrapper
 
 
 def classify(model,
@@ -63,6 +63,8 @@ def main(
     model = FeedForwardTower(tower_type='normal', cell_type=cell_type, cell_kernel=cell_kernel, time_steps=time_steps,
                              normalization=normalization, dropout=dropout, do_preconv=True, skip_first=True,
                              preconv_kernel=1)
+
+    model = GammaNetWrapper(tower_type='small', time_steps=3, num_classes=1000)
 
     state = torch.load(f'../bw_cluster_weights/{weights_file}')
     model.load_state_dict(state)

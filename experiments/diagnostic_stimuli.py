@@ -13,7 +13,7 @@ import argparse
 from typing import List
 
 from datasets.imagenet_classes import get_imagenet_class_mapping
-from models.architecture import FeedForwardTower
+from models.architecture import FeedForwardTower, GammaNetWrapper
 
 from ds_transforms import NORMAL, FOREGROUND, SHILOUETTE, FRANKENSTEIN, SERRATED, DEV_TEST
 
@@ -94,8 +94,11 @@ def main(
 
     _, _, imagenet2voc = get_imagenet_class_mapping(dataset_path)
 
-    model = FeedForwardTower(tower_type='normal', cell_type=cell_type, cell_kernel=cell_kernel, time_steps=time_steps,
+    if cell_type in ['conv', 'rnn', 'gru', 'lstm', 'reciprocal', 'fgru', 'hgru']:
+        model = FeedForwardTower(tower_type='normal', cell_type=cell_type, cell_kernel=cell_kernel, time_steps=time_steps,
                              normalization=normalization, dropout=dropout, do_preconv=True, skip_first=True, preconv_kernel=1)
+    else:
+        model = GammaNetWrapper(tower_type='small', time_steps=3, num_classes=1000)
 
     state = torch.load(f'../bw_cluster_weights/{weights_file}')
     model.load_state_dict(state)

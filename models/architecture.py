@@ -349,6 +349,7 @@ class GammaNetWrapper(torch.nn.Module):
         for k, v in kwargs.items():
             print(f"Unknown Parameter {k}:{v}")
         self.time_steps = time_steps
+        self.cell_type = 'fgru'
 
         if tower_type == 'normal':
             self.network = serrelabmodels.gamanet.BaseGN(timesteps=time_steps)
