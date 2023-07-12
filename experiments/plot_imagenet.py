@@ -19,7 +19,6 @@ def plot_imagenet_accs(all_accs, out_file, fdr: float, show = False):
     })
     plt.figure()
 
-    xs =  np.arange(1,16,1)
 
     for name, accs in all_accs.items():
         p = man_kendall_test(accs[:8])

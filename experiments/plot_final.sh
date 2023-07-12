@@ -1,6 +1,6 @@
 
 Q="0.00625"
-EXT="png"
+EXT="pdf"
 
 
 # non-normalized dignostic stimuli
@@ -21,7 +21,9 @@ python plot_diagnostic_stimuli.py -f ../results/stimuli/2023-06-25-15-48_stimuli
 
 python plot_diagnostic_stimuli.py -f ../results/stimuli/2023-06-25-15-52_stimuli_fgru-skip-first-ts7.pt -o diagnostic_stimuli_fgru_ts7.$EXT --fdr $Q -n "fGRU (T=7)"
 
-python plot_diagnostic_stimuli.py -f ../results/stimuli/2023-07-03-01-32_stimuli_gammanet-ts3.pt -o diagnostic_stimuli_gammanet_ts3.$EXT --fdr $Q -n "$\gamma$-Net (T=3)"
+python plot_diagnostic_stimuli.py -f ../results/stimuli/2023-07-03-01-32_stimuli_gammanet-ts3.pt -o diagnostic_stimuli_gammanet_ts3.$EXT --fdr $Q -n '$\gamma$-Net (T=3)'
+
+python plot_diagnostic_stimuli.py -f ../results/stimuli/2023-07-12-17-19_stimuli_gammanet-ts5.pt -o diagnostic_stimuli_gammanet_ts5.$EXT --fdr $Q -n '$\gamma$-Net (T=5)'
 
 
 # rsa
@@ -42,4 +44,4 @@ python plot_rs_analysis.py -f ../results/rsa/2023-06-25-03-30_rsa_reciprocal-ski
 
 python plot_rs_analysis.py -f ../results/rsa/2023-06-25-18-24_rsa_fgru-skip-first-ts7_fixed.pt -o rsa_fgru_ts7.$EXT --fdr $Q -n "fGRU (T=7)"
 
-python plot_rs_analysis.py -f ../results/rsa/2023-07-03-02-38_rsa_gammanet-ts3_fixed.pt -o rsa_gammanet_ts3.$EXT --fdr $Q -n "$\gamma$-Net (T=3)"
+python plot_rs_analysis.py -f ../results/rsa/2023-07-03-02-38_rsa_gammanet-ts3_fixed.pt -o rsa_gammanet_ts3.$EXT --fdr $Q -n '$\gamma$-Net (T=3)'

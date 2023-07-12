@@ -19,14 +19,13 @@ def plot_rsa(args,
              out_file: str,
              fdr: float,
              show: bool = False):
-    plt.figure()
     plt.rcParams.update({
         'font.size': 15,
         'figure.figsize': (8, 5),
         'axes.spines.right': False,
         'axes.spines.top': False
     })
-
+    plt.figure()
     if args.method == "fixed":
         method_string = r'rank-correlation $(\rho_a)$'
     elif args.method == "weighted":

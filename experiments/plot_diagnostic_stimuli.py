@@ -16,7 +16,8 @@ def main(filename: str,
         'font.size': 15,
         'figure.figsize': (8, 5),
         'axes.spines.right': False,
-        'axes.spines.top': False
+        'axes.spines.top': False,
+        'text.usetex' : True
     })
 
     # Load RSA results

@@ -94,9 +94,10 @@ class FrankensteinFlip:
         lower = np.flip(lower, axis=1)
         image_array = np.vstack((upper, lower))
 
-        left, right = np.split(image_array, 2, axis=1)
-        right = np.flip(right, axis=0)
-        image_array = np.hstack((left, right))
+        # removed second vertical flip
+        #left, right = np.split(image_array, 2, axis=1)
+        #right = np.flip(right, axis=0)
+        #image_array = np.hstack((left, right))
 
         return F.to_pil_image(image_array)
 
