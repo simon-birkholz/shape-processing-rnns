@@ -37,7 +37,7 @@ def main(dataset_path: str, out_path: str):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('path', type=str, help='Path to PascalVOC dataset')
+    parser.add_argument('--path', type=str, help='Path to PascalVOC dataset')
     parser.add_argument('--out', type=str, help='name for the saved diagram', default='output-diagram.pdf')
 
     args = parser.parse_args()
