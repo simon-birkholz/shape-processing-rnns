@@ -39,3 +39,22 @@ python timeseries_rs_analysis.py -f ../results/rsa/2023-07-05-18-02_rsa_reciproc
 	-f ../results/rsa/2023-07-06-02-35_rsa_reciprocal-skip-first-ts7-ro6_fixed.pt \
 	-f ../results/rsa/2023-07-06-04-09_rsa_reciprocal-skip-first-ts7-ro7_fixed.pt \
 	-o rsa_rgc_ts1-7.$EXT --fdr $Q -n "RGC (T=7)"
+	
+python timeseries_rs_analysis.py -f ../results/rsa/2023-07-15-05-30_rsa_gru-skip-first-ts7-ro1_fixed.pt \
+	-f ../results/rsa/2023-07-15-06-21_rsa_gru-skip-first-ts7-ro2_fixed.pt \
+	-f ../results/rsa/2023-07-15-17-14_rsa_gru-skip-first-ts7-ro3_fixed.pt \
+	-f ../results/rsa/2023-07-15-18-54_rsa_gru-skip-first-ts7-ro4_fixed.pt \
+	-f ../results/rsa/2023-07-15-19-54_rsa_gru-skip-first-ts7-ro5_fixed.pt \
+	-f ../results/rsa/2023-07-15-20-53_rsa_gru-skip-first-ts7-ro6_fixed.pt \
+	-f ../results/rsa/2023-07-15-21-49_rsa_gru-skip-first-ts7-ro7_fixed.pt \
+	-o rsa_gru_ts1-7.$EXT --fdr $Q -n "GRU (T=7)"
+	
+	python timeseries_rs_analysis.py -f ../results/rsa/2023-07-16-01-46_rsa_lstm-skip-first-ts7-ro1_fixed.pt \
+	-f ../results/rsa/2023-07-16-03-36_rsa_lstm-skip-first-ts7-ro2_fixed.pt \
+	-f ../results/rsa/2023-07-16-05-23_rsa_lstm-skip-first-ts7-ro3_fixed.pt \
+	-f ../results/rsa/2023-07-16-07-07_rsa_lstm-skip-first-ts7-ro4_fixed.pt \
+	-f ../results/rsa/2023-07-17-18-51_rsa_lstm-skip-first-ts7-ro5_fixed.pt \
+	-f ../results/rsa/2023-07-17-20-36_rsa_lstm-skip-first-ts7-ro6_fixed.pt \
+	-f ../results/rsa/2023-07-17-22-15_rsa_lstm-skip-first-ts7-ro7_fixed.pt \
+	-o rsa_lstm_ts1-7.$EXT --fdr $Q -n "LSTM (T=7)"
+	
