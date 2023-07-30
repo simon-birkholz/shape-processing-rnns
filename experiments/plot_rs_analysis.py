@@ -49,7 +49,7 @@ def plot_rsa(args,
     colors = [colorseq[i] for _ in range(len(comparisons.keys())) for i in range(len(comparison_ds))]
     legend = [mpl.patches.Patch(color=colorseq[i], label=dset) for i, dset in enumerate(comparison_ds)]
     plt.bar(x=xs, height=heights, yerr=[lower_error, upper_error], color=colors)
-    plt.scatter(x=xs[significant], y=heights[significant] + 0.1, marker="*", color="black")
+    plt.scatter(x=xs[significant], y=heights[significant] + upper_error[significant] + 0.05, marker="*", color="black")
     plt.xticks(xticks, labels=comparison_layers)
     plt.ylim(top=1.0, bottom=-0.25)
     plt.legend(handles=legend, loc="upper left")

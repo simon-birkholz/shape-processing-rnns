@@ -61,6 +61,7 @@ To use reload already existing weights the `ModelFileContext` class is used.
 
 This will save the model as well as the optimizer state every 5 epochs. It will also track the available files in a info file.
 When a new run is started it will look for the highest checkpoint and tries to load it to contine training.
+
 ## Experiments and Evaluation
 
 For the analysis on diagnostic stimuli and the representational similarity analysis see `experiments`.
