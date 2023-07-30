@@ -28,9 +28,9 @@ python plot_diagnostic_stimuli.py -f ../results/stimuli/2023-07-12-17-19_stimuli
 
 # rsa
 
-python plot_rs_analysis.py -f ../results/rsa/2023-06-05-05-37_rsa_conv_fixed.pt -o rsa_conv_normal.$EXT --fdr $Q -n "Conv"
+python plot_rs_analysis.py -f ../results/rsa/2023-06-26-13-11_rsa_conv-optim-normal_fixed.pt -o rsa_conv_normal.$EXT --fdr $Q -n "Conv-Normal"
 
-python plot_rs_analysis.py -f ../results/stimuli/2023-06-25-16-09_stimuli_conv-optim-wider.pt -o rsa_conv_wider.$EXT --fdr $Q -n "Conv-Wider"
+python plot_rs_analysis.py -f ../results/rsa/2023-06-25-17-16_rsa_conv-optim-wider_fixed.pt -o rsa_conv_wider.$EXT --fdr $Q -n "Conv-Wider"
 
 python plot_rs_analysis.py -f ../results/rsa/2023-06-26-00-23_rsa_rnn-skip-first-ts7-ro7_fixed.pt -o rsa_rnn_ts7.$EXT --fdr $Q -n "RNN (T=7)"
 
