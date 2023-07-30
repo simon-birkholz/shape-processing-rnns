@@ -47,7 +47,7 @@ def plot_rsa(args,
     significant = [significant[i] for i in needed_ps]
     colorseq = [mpl.colors.to_rgb(mpl.colors.TABLEAU_COLORS[k]) for k in mpl.colors.TABLEAU_COLORS]
     colors = [colorseq[i] for _ in range(len(comparisons.keys())) for i in range(len(comparison_ds))]
-    legend = [mpl.patches.Patch(color=colorseq[i], label=dset) for i, dset in enumerate(comparison_ds)]
+    legend = [mpl.patches.Patch(color=colorseq[i], label=dset if not dset == 'shilouette' else 'silhouette') for i, dset in enumerate(comparison_ds)]
     plt.bar(x=xs, height=heights, yerr=[lower_error, upper_error], color=colors)
     plt.scatter(x=xs[significant], y=heights[significant] + upper_error[significant] + 0.05, marker="*", color="black")
     plt.xticks(xticks, labels=comparison_layers)
