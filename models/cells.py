@@ -29,6 +29,22 @@ def get_maybe_normalization(normalization: str, channels: int):
     else:
         return None
 
+'''
+All conv recurrent cells are pytorch modules.
+They all get the following input parameters in their constructor:
+- in_channels: Number of input channels
+- out_channels: Number of output channels
+- kernel_size: The size of the convolution kernels
+- stride: Stride value
+- activation: The activation function
+- normalization: The normalization, if used
+
+Each implementation of the forward function has the following signature:
+forward(self, input, hx=None, t=0)
+- input: The input of the network
+- hx: The current hidden state of the network, if the network has multiple hidden states, this is a tuple
+- t: Not used anymore
+'''
 
 class ConvRNNCell(torch.nn.Module):
     def __init__(self,
@@ -53,7 +69,7 @@ class ConvRNNCell(torch.nn.Module):
         # self.stride = ntuple(stride)
         # self.dilation = ntuple(dilation)
 
-        # TODO there are multiple options for combining the hidden state and the input state
+        # there are multiple options for combining the hidden state and the input state
         # 1. Concat beforehand and then convolution
         # 2. Elementwise addition and then convolution (Hidden State and Input state would need the same dimensions
         # 3. Two convolution and then elementwise addition
@@ -229,8 +245,6 @@ class ConvLSTMCell(torch.nn.Module):
         else:
             h_cur, c_cur = hidden_state
 
-        # TODO important LSTM has the output gate on the new state candidate and with hadamard product
-
         forget_gate = F.sigmoid(self.wf(input) + self.uf(h_cur) + self.vf(c_cur))
         input_gate = F.sigmoid(self.wi(input) + self.ui(h_cur) + self.vi(c_cur))
         output_gate = F.sigmoid(self.wo(input) + self.uo(h_cur) + self.vo(c_cur))
@@ -244,8 +258,7 @@ class ConvLSTMCell(torch.nn.Module):
 
         c_next = forget_gate * c_cur + input_gate * candidate
 
-        # TODO support different activation functions
-        h_next = output_gate * F.tanh(c_next)
+        h_next = output_gate *  self.activation(c_next)
 
         if self.norm1:
             h_next = self.norm1(h_next)

@@ -30,7 +30,7 @@ Parameters of the config are as follows:
 - `dataset_path`: File path to the directory where the data is located
 - `dataset_val_path` (Optional) : File path to the validation data (only needed for some datasets)
 - `batch_size`: The effective batch size with which the model will be trained
-- `epochs`: Number of epochs the network will be trained
+- `epochs`: Number of epochs the network will be trained. If `early-stop` is supplied as value, then the early stopping algorithm will be used.
 - `learnng_rate` : Learning rate that will be used
 - `model_base` : The overall base architecture of the model
 - `tower_type` : defines the configuration of filter sizes that will be loaded
@@ -52,8 +52,15 @@ Additional Parameters could be:
 - 
 Additional Parameters for the Weights and Biases wrapper (used during development):
 - `wb_suppress` : If true, the wand api will not be used
-- `wb_group` : The group name for the run on the wand dashboard
-- 
+- `wb_group` : The group name for the run on the wandb dashboard
+- `wb_run_name` : The name of the run that will be displayed on the wandb dashboard
+- `wb_sweep_id` : Used to run a hyperparameter search using the Sweep api of wandb
+
+To use reload already existing weights the `ModelFileContext` class is used.
+- `do_reload` : If true, this allows to reload previous runs that have been started with the same outfile parameter
+
+This will save the model as well as the optimizer state every 5 epochs. It will also track the available files in a info file.
+When a new run is started it will look for the highest checkpoint and tries to load it to contine training.
 ## Experiments and Evaluation
 
 For the analysis on diagnostic stimuli and the representational similarity analysis see `experiments`.
