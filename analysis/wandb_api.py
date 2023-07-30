@@ -22,7 +22,7 @@ def to_dict(config_str: str):
 
 def init_wandb_api():
     global api, project
-    api = wandb.Api()
+    api = wandb.Api(timeout=60)
 
     project = api.project("shape-processing-rnns", entity="cenrypol")
 
@@ -178,7 +178,7 @@ if __name__ == '__main__':
 
     GROUP = 'kw14-test-functionality'
     # test_sweep = get_sweep_by_name('fftower-conv')
-    runs = get_runs_by_regex('f', group=GROUP)
+    runs = get_runs_by_regex('', group=None)
     plot_runs_accuracy(runs,'test')
     total_pwr = get_power_consumption(runs)
     print(f'Total Power Consumed: {total_pwr / 1000} (kWh)')

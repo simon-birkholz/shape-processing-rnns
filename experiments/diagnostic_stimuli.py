@@ -16,7 +16,7 @@ from datasets.imagenet_classes import get_imagenet_class_mapping
 from models.architecture import FeedForwardTower, GammaNetWrapper
 
 from ds_transforms import NORMAL, FOREGROUND, SHILOUETTE, FRANKENSTEIN, SERRATED, DEV_TEST
-
+from tqdm import tqdm
 
 def permutation_test(probs, labels, n=1000):
     probs = probs.numpy()
@@ -32,6 +32,7 @@ def p_value(random_dist, model_acc):
 def classify(model,
              data_loader,
              imagenet2voc,
+             time_steps = -1,
              device: str = 'cpu'):
     model.to(device)
 
@@ -46,7 +47,10 @@ def classify(model,
             inputs = inputs.to(device)
             all_labels = torch.cat((all_labels, targets), dim=0)
 
-            outputs = model(inputs)
+            if time_steps > 0:
+                outputs = model(inputs, False, False, time_steps)
+            else:
+                outputs = model(inputs)
             probabilities = F.softmax(outputs, dim=1)
             predicted = torch.argmax(probabilities, dim=1)
 
@@ -107,7 +111,7 @@ def main(
     for ds, ds_name in all_datasets:
         ds_loader = data.DataLoader(ds, batch_size=batch_size)
         print(f'Processing {ds_name} stimuli...')
-        accs[ds_name] = classify(model, ds_loader, imagenet2voc, device='cuda')
+        accs[ds_name] = [classify(model, ds_loader, imagenet2voc,t, device='cuda') for t in tqdm(range(1,16))]
 
     return {
         "accuracy": accs
@@ -137,6 +141,6 @@ if __name__ == '__main__':
     save_data['commandline'] = args
 
     time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")
-    out_file = f"../results/stimuli/{time}_stimuli_{args.out}.pt"
+    out_file = f"../results/stimuli/{time}_stimuli_series_{args.out}.pt"
     torch.save(save_data, out_file)
     print(f"Written data to {out_file}")

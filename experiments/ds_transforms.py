@@ -91,24 +91,7 @@ class FrankensteinFlip:
         image_array = np.array(image)
 
         upper, lower = np.split(image_array, 2)
-
-        # taken from https://github.com/cJarvers/shapebias/blob/main/src/mappings.py
-        #obj_indices = np.argwhere(lower[0,:,:])
-        obj_indices = np.where((lower[0,:,:] == 0).all(axis=-1))
-        first = obj_indices[0].min()
-        last = obj_indices[0].max()
-        shift = first - (lower.shape[1] - last)
         lower = np.flip(lower, axis=1)
-        if shift > 0:  # shift right
-            lower[:, shift:, :] = lower[:, :-shift, :]
-            lower[:, :shift, :] = 255  # fill undefined area with 0
-        elif shift < 0:  # shift left
-            lower[:, :shift, :] = lower[:, -shift:, :]
-            lower[:, shift:, :] = 255  # fill undefined area with 0
-        else:  # for shift == 0, do nothing
-            pass
-
-
         image_array = np.vstack((upper, lower))
 
         # removed second vertical flip

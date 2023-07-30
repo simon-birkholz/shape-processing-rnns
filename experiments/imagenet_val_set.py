@@ -58,7 +58,8 @@ def main(
         normalization: str,
         dropout: float,
 ):
-    normal_ds = loader_ffcv_dataset(data_path, batch_size)
+
+    #normal_ds = loader_ffcv_dataset(data_path, batch_size)
 
     model = FeedForwardTower(tower_type='normal', cell_type=cell_type, cell_kernel=cell_kernel, time_steps=time_steps,
                              normalization=normalization, dropout=dropout, do_preconv=True, skip_first=True,
