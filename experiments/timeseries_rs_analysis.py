@@ -125,7 +125,7 @@ def main(filenames: str,
     plot_timeseries_rsa(args, modelname, 'hidden4', comparison_ds, args.time_steps, comparisons, out_file, fdr, show)
     if args.cell_type in ['reciprocal', 'lstm']:
         out_file2 = Path(out_file).stem + '_cell' + Path(out_file).suffix
-        plot_timeseries_rsa(args, modelname, 'cell4', comparison_ds, args.time_steps, comparisons, out_file2, fdr,
+        plot_timeseries_rsa(args, modelname + ', Cell', 'cell4', comparison_ds, args.time_steps, comparisons, out_file2, fdr,
                             show)
 
 

@@ -35,6 +35,7 @@ def main(filename: str,
     plt.bar(x_pos - 0.2, acc_list, width=0.4)
     plt.violinplot(rand_distributions, positions=x_pos + 0.2, widths=0.4, showmeans=True)
     plt.scatter(x_pos[significant] - 0.2, acc_list[significant] + 0.05, marker="*", c="black")
+    args.datasets[2] = 'silhouette'
     plt.xticks(x_pos, args.datasets)
     plt.title(f'Accuracy of {modelname} on diagnostic stimuli')
     plt.savefig('../figures/' + out_file)

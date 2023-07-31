@@ -41,7 +41,7 @@ def plot_ds_stimuli_accs(ds_name, all_accs, out_file, fdr: float, show=False):
     plt.legend(loc="upper left")
     plt.ylabel('Top1-Accuracy')
     plt.xlabel('Timesteps')
-    plt.title(f'Accuracy over time on {ds_name}')
+    plt.title(f'Accuracy over time on {ds_name if not ds_name == "shilouette" else "silhouette"}')
     plt.savefig('../figures/' + out_file)
     if show:
         plt.show()

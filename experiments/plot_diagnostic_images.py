@@ -29,7 +29,7 @@ def main(dataset_path: str, out_path: str):
     frankenstein_ds = PascalVoc(dataset_path, set, transform=FRANKENSTEIN)
     serrated_ds = PascalVoc(dataset_path, set, transform=SERRATED)
 
-    all_datasets = [(normal_ds, 'normal'), (foreground_ds, 'foreground'), (shilouette_ds, 'shilouette'),
+    all_datasets = [(normal_ds, 'normal'), (foreground_ds, 'foreground'), (shilouette_ds, 'silhouette'),
                     (frankenstein_ds, 'frankenstein'), (serrated_ds, 'serrated')]
 
     plot_images(all_datasets, out_path)
